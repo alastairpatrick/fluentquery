@@ -28,13 +28,13 @@ const rangeStream = (source, range) => {
       let cursor = event.target.result;
       if (cursor) {
         cursor.continue();
-        observer.onNext(cursor.value);
+        observer.next(cursor.value);
       } else {
-        observer.onCompleted();
+        observer.complete();
       }
     };
     request.onerror = function(event) {
-      observer.onError(event.target.error);
+      observer.error(event.target.error);
     };
   });
 }
@@ -167,13 +167,13 @@ class IDBTable extends Table {
           } else {
             request.onsuccess = function(event) {
               setKeyPath(tuple, event.target.result);
-              observer.onNext(tuple);
-              observer.onCompleted();
+              observer.next(tuple);
+              observer.complete();
             };
           }
 
           request.onerror = function(event) {
-            observer.onError(event.target.error);
+            observer.error(event.target.error);
           };
         });
       });
@@ -183,16 +183,16 @@ class IDBTable extends Table {
         for (let i = 0; i < requests.length; ++i) {
           let request = requests[i];
           request.onerror = function(event) {
-            observer.onError(event.target.error);
+            observer.error(event.target.error);
           };
         };
 
         requests[requests.length - 1].onsuccess = function(event) {
           for (let i = 0; i < tuples.length; ++i) {
             let tuple = tuples[i];
-            observer.onNext(tuple);
+            observer.next(tuple);
           }
-          observer.onCompleted();
+          observer.complete();
         };
       });
     }

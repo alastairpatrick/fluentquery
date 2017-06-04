@@ -302,19 +302,9 @@ const newQuery = (command) => {
       return chain(buildRelation);
     },
 
-    forEach(arg0, arg1) {
-      let params, callback;
-      if (arg1 === undefined)  {
-        callback = arg0;
-      } else {
-        callback = arg1;
-        params = arg0;
-      }
-
-      return new Promise((resolve, reject) => {
-        let observable = query(params);
-        observable.forEach(callback, reject, resolve);
-      });
+    forEach(callback, promiseCtr=Promise) {
+      let observable = query();
+      return observable.forEach(callback, promiseCtr);
     },
 
     then(resolved, rejected) {

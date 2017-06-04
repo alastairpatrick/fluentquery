@@ -244,7 +244,7 @@ class SetOperation extends Relation {
   execute(context) {
     let observable;
     if (this.type === "union" || this.type === "unionAll") {
-      observable = Observable.merge(context.execute(this.lRelation), context.execute(this.rRelation));
+      observable = context.execute(this.lRelation).merge(context.execute(this.rRelation));
     } else {
       throw new Error(`Unknown set operation '${this.type}'.`);
     }
@@ -307,7 +307,7 @@ class Join extends Relation {
 
     let observable = context.execute(this.lRelation);
 
-    observable = observable.flatMap(aTuple => {
+    observable = observable.mergeMap(aTuple => {
       let rightContext = new Context(context, {
         tuple: Object.assign({}, context.tuple, aTuple),
       });
@@ -425,7 +425,7 @@ class GroupBy extends Relation {
 
     let observable = context.execute(this.relation);
     return observable.reduce(reduceStep, new ValueMap())
-                     .flatMap(extractTotals);
+                     .mergeMap(extractTotals);
   }
 
   accept(context) {
@@ -518,7 +518,7 @@ class Memoize extends Relation {
     if (observable !== undefined)
       return observable;
     
-    observable = context.execute(this.relation).replay();
+    observable = context.execute(this.relation).publishReplay();
     observable.connect();
     context.relationMemo.set(this, observable);
     return observable;
