@@ -4,6 +4,7 @@
   "description": "Structured query language for IndexedDB embedded in JavaScript",
   "main": "src/index.js",
   "scripts": {
+    "build": "node build.js",
     "test": "mocha src/**/*.spec.js --no-color"
   },
   "repository": {
@@ -18,10 +19,13 @@
   },
   "homepage": "https://github.com/alastairpatrick/fluentquery#readme",
   "devDependencies": {
+    "babili-webpack-plugin": "^0.1.1",
     "chai": "^4.0.1",
     "fake-indexeddb": "^2.0.3",
     "mocha": "^3.4.2",
-    "sinon": "^2.3.2"
+    "shelljs": "^0.7.7",
+    "sinon": "^2.3.2",
+    "webpack": "^2.6.1"
   },
   "dependencies": {
     "babel-to-go": "^6.24.2",
