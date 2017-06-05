@@ -131,7 +131,7 @@ class Select extends Relation {
   }
 }
 
-class Put extends Relation {
+class Write extends Relation {
   constructor(relation, table, options) {
     super();
     this.relation = relation;
@@ -140,10 +140,20 @@ class Put extends Relation {
   }
 
   execute(context) {
+    let observable = context.execute(this.relation);
+    
+    let method;
+    if (this.options.delete) {
+      observable = observable.map(tuple => tuple.old);
+      method = this.table.delete.bind(this.table);
+    } else {
+      method = this.table.put.bind(this.table);
+    }
+
     // All the tuples are collected in an array before applying any modifications
     // so that the modifications are not prematurely visible to the query.
-    return context.execute(this.relation).toArray().map(tuples => {
-      return this.table.put(context, tuples, this.options);
+    return observable.toArray().map(tuples => {
+      return method(context, tuples, this.options);
     }).mergeAll();
   }
 
@@ -547,9 +557,9 @@ module.exports = {
   Memoize,
   NamedRelation,
   OrderBy,
-  Put,
   Select,
   SetOperation,
   Table,
   Where,
+  Write,
 };

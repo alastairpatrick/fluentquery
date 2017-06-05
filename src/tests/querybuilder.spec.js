@@ -6,7 +6,7 @@ const { expect } = require("chai");
 const sinon = require("sinon");
 
 const { ArrayTable, NamedRelation } = require("..");
-const { insert, select, update, upsert } = require("../querybuilder");
+const { deleteFrom, insert, select, update, upsert } = require("../querybuilder");
 
 let sandbox = sinon.sandbox.create();
 
@@ -486,7 +486,7 @@ describe("fluentquery query builder", function() {
                  ]})
 
     expect(query.tree()).to.deep.equal({
-      class: "Put",
+      class: "Write",
       relation: {
         class: "Select",
         selector: "value",
@@ -497,6 +497,7 @@ describe("fluentquery query builder", function() {
       },
       options: {
         overwrite: false,
+        delete: false,
       },
     });
   })
@@ -507,7 +508,7 @@ describe("fluentquery query builder", function() {
                  .from ({thing})
 
     expect(query.tree()).to.deep.equal({
-      class: "Put",
+      class: "Write",
       relation: {
         class: "Select",
         selector: "{ id: thing.id, name: thing.name.toLowerCase() }",
@@ -518,6 +519,7 @@ describe("fluentquery query builder", function() {
       },
       options: {
         overwrite: true,
+        delete: false,
       },
     });
   })
@@ -527,7 +529,7 @@ describe("fluentquery query builder", function() {
                  .into (thingStore)
 
     expect(query.tree()).to.deep.equal({
-      class: "Put",
+      class: "Write",
       relation: {
         class: "Select",
         selector: "Object.assign({}, old, { name: old.name.toLowerCase() })",
@@ -538,6 +540,23 @@ describe("fluentquery query builder", function() {
       },
       options: {
         overwrite: true,
+        delete: false,
+      },
+    });
+  })
+
+  it("builds delete", function() {
+    let query = deleteFrom (thingStore)
+
+    expect(query.tree()).to.deep.equal({
+      class: "Write",
+      relation: "old",
+      table: {
+        class: "ArrayTable",
+      },
+      options: {
+        overwrite: false,
+        delete: true,
       },
     });
   })

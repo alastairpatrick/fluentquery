@@ -41,9 +41,7 @@ const rangeStream = (source, range) => {
 
 const keyPathSetterMemo = Object.create(null);
 const keyPathSetter = (source) => {
-  if (source.keyPath === null) {
-    return identity;
-  } else if (typeof source.keyPath == "string") {
+  if (typeof source.keyPath == "string") {
     let setter = keyPathSetterMemo[source.keyPath];
     if (setter)
       return setter;
@@ -54,6 +52,26 @@ const keyPathSetter = (source) => {
 
     keyPathSetterMemo[source.keyPath] = setter;
     return setter;
+  } else {
+    throw new Error("Non-string keys paths not yet supported");
+  }
+}
+
+const keyPathGetterMemo = Object.create(null);
+const keyPathGetter = (source) => {
+  if (typeof source.keyPath == "string") {
+    let getter = keyPathGetterMemo[source.keyPath];
+    if (getter)
+      return getter;
+
+    let keyPath = source.keyPath.split(".");
+    let keyPathJS = keyPath.reduce((js, k) => js + '[' + JSON.stringify(k) + ']', "tuple");
+    getter = new Function("tuple", "return " + keyPathJS);
+
+    keyPathGetterMemo[source.keyPath] = getter;
+    return getter;
+  } else {
+    throw new Error("Non-string keys paths not yet supported");
   }
 }
 
@@ -196,6 +214,43 @@ class IDBTable extends Table {
         };
       });
     }
+  }
+
+  delete(context, tuples) {
+    let store = context.transaction.objectStore(this.name);
+    let getKeyPath = keyPathGetter(store);
+
+    let requests = [];
+    for (let i = 0; i < tuples.length; ++i) {
+      let key = getKeyPath(tuples[i]);
+      let request = store.delete(key);
+
+      // This error handler will be replaced when something subscribes to the observable.
+      request.onerror = function(event) {
+        throw event.target.error;
+      }
+      
+      requests.push(request);
+    };
+
+    if (requests.length === 0)
+      return Observable.from([]);
+
+    // In this path, the onsuccess callback provides the value of the auto-generated key.
+    return Observable.create(observer => {
+      requests.forEach(request => {
+        request.onerror = function(event) {
+          observer.error(event.target.error);
+        };
+      });
+
+      requests[requests.length - 1].onsuccess = function(event) {
+        for (let i = 0; i < tuples.length; ++i) {
+          observer.next(tuples[i]);
+          observer.complete();
+        }
+      }
+    });
   }
 
   tree() {

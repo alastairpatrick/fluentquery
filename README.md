@@ -30,7 +30,7 @@ let query = select `{ name: employee.last_name + ", " + employee.first_name,
                .on `order.employee_id == employee.id`
           .orderBy `employee.last_name` .asc
 
-// Invoke query many times.
+// Invoke query.
 query().forEach(row => {
   // Do something with rows as they become available.
 }).then(() => {

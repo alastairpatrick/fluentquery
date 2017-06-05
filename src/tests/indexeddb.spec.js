@@ -9,7 +9,16 @@ const { Observable } = require("../rx");
 const indexedDB = require("fake-indexeddb");
 const IDBKeyRange = require("fake-indexeddb/lib/FDBKeyRange");
 
-const { Context, IDBTable, IDBTransaction, Range, select, insert, update } = require("..");
+const {
+  Context,
+  IDBTable,
+  IDBTransaction,
+  Range,
+  deleteFrom,
+  select,
+  insert,
+  update
+} = require("..");
 
 let sandbox = sinon.sandbox.create();
 
@@ -245,6 +254,26 @@ describe("IndexedDB integration", function() {
         expect(error).to.match(/Constraint/);
       });
     })
+
+    it("deletes rows", function() {
+      let observable = store.delete(context, [
+        {id: 3}
+      ]);
+
+      return resultArray(observable).then(results => {
+        expect(results).to.deep.equal([
+          {id: 3},
+        ]);
+
+        let observable = store.execute(context);
+        return resultArray(observable).then(results => {
+          expect(results).to.deep.equal([
+            {id: 1, city: "San Francisco"},
+            {id: 2, city: "San Francisco"},
+          ]);
+        });
+      });
+    })
   })
 
   it("wraps transaction with IDBTransaction", function() {
@@ -394,6 +423,24 @@ describe("IndexedDB integration", function() {
           {title: "quarry memories", author: "Fred", isbn: 123456},
           {title: "water buffaloes", author: "Fred", isbn: 234567},
           {title: "bedrock nights", author: "Barney", isbn: 345678},
+        ]);
+      });
+    });
+  })
+
+  it("can delete tuples from object store", function() {
+    let query = deleteFrom (book)
+                    .where `old.isbn == 234567`
+
+    return query.then(result => {
+      expect(result).to.deep.equal([
+        {title: "Water Buffaloes", author: "Fred", isbn: 234567},
+      ]);
+
+      return select `book` .from ({book}) .then(results => {
+        expect(results).to.deep.equal([
+          {title: "Quarry Memories", author: "Fred", isbn: 123456},
+          {title: "Bedrock Nights", author: "Barney", isbn: 345678},
         ]);
       });
     });

@@ -15,13 +15,13 @@ const {
   GroupBy,
   Join,
   OrderBy,
-  Put,
   Relation,
   Select,
   SetOperation,
   NamedRelation,
   TermGroups,
   Where,
+  Write,
   parseExpression,
   select,
   traverse,
@@ -115,13 +115,13 @@ describe("Tree", function() {
     })
   })
 
-  describe("Put", function() {
+  describe("Write", function() {
     it("accepts", function() {
-      visitor.Put = sandbox.stub();
+      visitor.Write = sandbox.stub();
       visitor.NamedRelation = sandbox.stub();
-      let put = new Put(thingRelation, thingStore, {})
-      traverse(put, visitor);
-      sinon.assert.calledOnce(visitor.Put);
+      let write = new Write(thingRelation, thingStore, {})
+      traverse(write, visitor);
+      sinon.assert.calledOnce(visitor.Write);
       sinon.assert.calledOnce(visitor.NamedRelation);
     })
   })

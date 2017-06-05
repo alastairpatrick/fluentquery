@@ -14,7 +14,7 @@ const {
   Join,
   NamedRelation,
   OrderBy,
-  Put,
+  Write,
   Select,
   TermGroups,
   Where,
@@ -245,17 +245,17 @@ describe("Optimize", function() {
       });
     })
 
-    it("adds readwrite transaction node if there are any Put nodes", function() {
+    it("adds readwrite transaction node if there are any Write nodes", function() {
       let db = {};
       let table = new IDBTable(db, "employee");
       let named = new NamedRelation(table, "e");
-      let put = new Put(named, table, {});
+      let write = new Write(named, table, {});
 
-      let analyzed = prepareTransaction(put);
+      let analyzed = prepareTransaction(write);
       expect(analyzed.tree()).to.deep.equal({
         class: "IDBTransaction",
         relation: {
-          class: "Put",
+          class: "Write",
           options: {},
           relation: "e",
           table: {

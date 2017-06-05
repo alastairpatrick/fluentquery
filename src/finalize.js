@@ -112,7 +112,7 @@ const prepareTransaction = (root) => {
   let mode = "readonly";
 
   root = traverse(root, {
-    Put(path) {
+    Write(path) {
       mode = "readwrite";
     },
 

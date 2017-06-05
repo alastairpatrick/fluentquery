@@ -16,11 +16,11 @@ const {
   Memoize,
   NamedRelation,
   OrderBy,
-  Put,
   Relation,
   Select,
   SetOperation,
   Where,
+  Write,
 } = require("./tree");
 
 const QUERY = Symbol("QUERY");
@@ -137,7 +137,10 @@ const newQuery = (command) => {
         if (into === undefined)
           throw new Error("Use into() to specify table to be updated.");
 
-        queryRelation = new Put(queryRelation, into, { overwrite: command !== "insert" });
+        queryRelation = new Write(queryRelation, into, {
+          overwrite: command === "update" || command === "upsert",
+          "delete": command === "delete",
+        });
       }
 
       return queryRelation;
@@ -179,7 +182,7 @@ const newQuery = (command) => {
         throw new Error("into() already called");
       into = table;
 
-      if (command === "update")
+      if (command === "update" || command === "delete")
         buildRelation = makeInnerJoin({old: table});
 
       return chain(buildRelation);
@@ -347,7 +350,12 @@ const update = (selector, ...args) => {
   return newQuery("update").select(selector, ...args);;
 };
 
+const deleteFrom = (table) => {
+  return newQuery("delete").into(table);
+}
+
 module.exports = {
+  deleteFrom,
   insert,
   select,
   update,
