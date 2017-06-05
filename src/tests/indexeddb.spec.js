@@ -264,7 +264,7 @@ describe("IndexedDB integration", function() {
                  .from ({book})
               .orderBy `book.title`;
 
-    return resultArray(query()).then(result => {
+    return query.then(result => {
       expect(result).to.deep.equal([
         {title: "Bedrock Nights"},
         {title: "Quarry Memories"},
@@ -279,7 +279,7 @@ describe("IndexedDB integration", function() {
                 .where `book.author == 'Fred'`
               .orderBy `book.title`;
 
-    return resultArray(query()).then(result => {
+    return query.then(result => {
       expect(result).to.deep.equal([
         {title: "Quarry Memories"},
         {title: "Water Buffaloes"},
@@ -297,7 +297,7 @@ describe("IndexedDB integration", function() {
                 .where `book.author == 'Fred'`
               .orderBy `book.title`;
 
-    return resultArray(query()).then(result => {
+    return query.then(result => {
       expect(result).to.deep.equal([
         {
           city: "San Francisco",
@@ -329,7 +329,7 @@ describe("IndexedDB integration", function() {
                 .where `book.author == 'Fred' && inventoryItem.isbn == book.isbn && store.id == inventoryItem.storeId`
               .orderBy `book.title`;
 
-    return resultArray(query()).then(result => {
+    return query.then(result => {
       expect(result).to.deep.equal([
         {
           city: "San Francisco",
@@ -362,7 +362,7 @@ describe("IndexedDB integration", function() {
                    { title: "Database", author: "O'Neil", isbn: 9781558603929 },
                  ]})
 
-    return resultArray(query()).then(result => {
+    return query.then(result => {
       expect(result).to.deep.equal([
         { title: "Database", author: "O'Neil", isbn: 9781558603929 },
       ]);
@@ -382,7 +382,7 @@ describe("IndexedDB integration", function() {
     let query = update `{ title: old.title.toLowerCase() }`
                  .into (book)
 
-    return resultArray(query()).then(result => {
+    return query.then(result => {
       expect(result).to.deep.equal([
         {title: "quarry memories", author: "Fred", isbn: 123456},
         {title: "water buffaloes", author: "Fred", isbn: 234567},
@@ -410,14 +410,14 @@ describe("IndexedDB integration", function() {
 
     let transaction = db.transaction(["book"], "readwrite");
     let found;
-    return findBuffaloes({}, transaction).toArray().toPromise().then(books => {
-      return updateTitle({isbn: books[0].isbn, newTitle: "Replaced"}, transaction).toArray().toPromise();
+    return findBuffaloes({}, transaction).then(books => {
+      return updateTitle({isbn: books[0].isbn, newTitle: "Replaced"}, transaction);
     }).then(updated => {
       let query = select `{title: book.title, isbn: book.isbn}`
                   .from ({book})
                 .orderBy `book.title`;
 
-      return resultArray(query()).then(result => {
+      return query.then(result => {
         expect(result).to.deep.equal([
           {isbn: 345678, title: "Bedrock Nights"},
           {isbn: 123456, title: "Quarry Memories"},

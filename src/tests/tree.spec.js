@@ -410,7 +410,7 @@ describe("Tree", function() {
                 .join({type})
                 .on `thing.type_id === type.id`;
 
-      return resultArray(query()).then(result => {
+      return query.then(result => {
         expect(result).to.deep.equal([
           { name: "Apple", type_name: "Vegetable" },
           { name: "Banana", type_name: "Vegetable" },

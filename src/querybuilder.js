@@ -27,6 +27,20 @@ const QUERY = Symbol("QUERY");
 
 const has = Object.prototype.hasOwnProperty;
 
+class QueryResult {
+  constructor(observable) {
+    this.observable = observable;
+  }
+
+  then(resolved, rejected) {
+    return this.observable.toArray().toPromise().then(resolved, rejected);
+  }
+
+  forEach(callback) {
+    return this.observable.forEach(callback);
+  }
+}
+
 const makeInnerJoin = (relationMap) => {
   let relations = [];
   for (let n in relationMap) {
@@ -88,7 +102,8 @@ const newQuery = (command) => {
 
     let context = new Context(params);
     context.transaction = transaction;
-    return context.execute(relation);
+    let observable = context.execute(relation);
+    return new QueryResult(observable);
   }
 
   const chain = (newRelation, newMode) => {
@@ -304,16 +319,12 @@ const newQuery = (command) => {
       return chain(buildRelation);
     },
 
-    forEach(callback, promiseCtr=Promise) {
-      let observable = query();
-      return observable.forEach(callback, promiseCtr);
+    forEach(callback) {
+      return query().forEach(callback);
     },
 
     then(resolved, rejected) {
-      return new Promise((resolve, reject) => {
-        let observable = query();
-        observable.toArray().subscribe(resolve, reject);
-      }).then(resolved, rejected);
+      return query().then(resolved, rejected);
     }
   }));
 
