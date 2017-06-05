@@ -86,7 +86,7 @@ describe("TermGroups", function() {
 
     let terms = groups.terms;
     expect(terms.size).to.equal(1);
-    expect(terms.get({a}).tree().expression).to.equal("$cmp(a.x, 1) === 0");
+    expect(terms.get({a}).tree().expression).to.equal("$$cmp(a.x, 1) === 0");
   });
 
   it("transforms range on unbound identifier to cmp()", function() {
@@ -94,7 +94,7 @@ describe("TermGroups", function() {
 
     let terms = groups.terms;
     expect(terms.size).to.equal(1);
-    expect(terms.get({a}).tree().expression).to.equal("$cmp(a.x, 1) >= 0 && $cmp(a.x, 2) < 0");
+    expect(terms.get({a}).tree().expression).to.equal("$$cmp(a.x, 1) >= 0 && $$cmp(a.x, 2) < 0");
   });
 
   it("both sides of comparison may depend on tuple", function() {
@@ -102,7 +102,7 @@ describe("TermGroups", function() {
 
     let terms = groups.terms;
     expect(terms.size).to.equal(1);
-    expect(terms.get({a}).tree().expression).to.equal("$cmp(a.x, a.y) >= 0");
+    expect(terms.get({a}).tree().expression).to.equal("$$cmp(a.x, a.y) >= 0");
   });
 
   it("transforms equality on bound identifier to cmp()", function() {
@@ -110,7 +110,7 @@ describe("TermGroups", function() {
 
     let terms = groups.terms;
     expect(terms.size).to.equal(1);
-    expect(terms.get({a}).tree().expression).to.equal("(v => $cmp(v.x, 1) === 0)(a)");
+    expect(terms.get({a}).tree().expression).to.equal("(v => $$cmp(v.x, 1) === 0)(a)");
   });
 
   it("throws if dependency is not present in schema", function() {
@@ -119,9 +119,9 @@ describe("TermGroups", function() {
     }).to.throw(/bad/);
   })
 
-  it("throws if unbound identifier begins with $", function() {
+  it("throws if unbound identifier begins with $$", function() {
     expect(function() {
-      groups.parse("$bad.x", schema);
+      groups.parse("$$bad.x", schema);
     }).to.throw(/bad/);
   })
 
@@ -130,7 +130,7 @@ describe("TermGroups", function() {
 
     let terms = groups.terms;
     expect(terms.size).to.equal(2);
-    expect(terms.get({a}).tree().expression).to.equal("$cmp(a, $subs[0]) === 0");
+    expect(terms.get({a}).tree().expression).to.equal("$$cmp(a, $$subs[0]) === 0");
     expect(terms.get({b}).tree().expression).to.equal("b");
     expect(groups.substitutions).to.deep.equal([7]);
   })
@@ -158,7 +158,7 @@ describe("TermGroups", function() {
     
     let terms = groups.terms;
     expect(terms.size).to.equal(1);
-    expect(terms.get({a}).tree().expression).to.equal("$cmp(a + $subs[0], 1) > 0 && $cmp(a + $subs[1], 2) < 0");
+    expect(terms.get({a}).tree().expression).to.equal("$$cmp(a + $$subs[0], 1) > 0 && $$cmp(a + $$subs[1], 2) < 0");
     expect(groups.substitutions).to.deep.equal([7, 8]);
   })
 
@@ -357,7 +357,7 @@ describe("TermGroups", function() {
     })
 
     it("does not identify expression with non-range component as range", function() {
-      groups.parse("a.x == 1 || $p.something", schema);
+      groups.parse("a.x == 1 || Math.sin(a.x) < 0", schema);
       let terms = groups.terms;
       expect(terms.get({a}).tree().keys).to.be.undefined;
     })
@@ -375,12 +375,12 @@ describe("TermGroups", function() {
     })
 
     it("identifies range with parameter", function() {
-      groups.parse("a.x == $p.x", schema);
+      groups.parse("a.x == $x", schema);
       let terms = groups.terms;
       expect(terms.get({a}).tree().keys.a.x).to.deep.equal({
         class: "RangeExpression",
-        lower: "$p.x",
-        upper: "$p.x",
+        lower: "this.params.x",
+        upper: "this.params.x",
       });
     })
 
@@ -464,7 +464,7 @@ describe("Expression", function() {
     let expression = parseExpression(["sum(a.x)"], schema, [], {
       allowAggregates: true,
     });
-    expect(expression.tree()).to.deep.equal("$g[0] = sum($g[0], a.x), $g[0].value");
+    expect(expression.tree()).to.deep.equal("$$g[0] = sum($$g[0], a.x), $$g[0].value");
     expect(expression.dependencies).to.deep.equal({a});
   })
 

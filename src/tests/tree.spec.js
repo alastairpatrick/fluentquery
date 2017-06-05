@@ -104,7 +104,7 @@ describe("Tree", function() {
 
     it("selects parameter", function() {
       let select = new Select(thingRelation,
-                              new Expression(({thing}, p) => ({ p1: p.p1, p2: p.p2 }), {thing}));
+                              new Expression(function({thing}) { return { p1: this.params.p1, p2: this.params.p2 }}, {thing}));
       return resultArray(select.execute(context)).then(result => {
         expect(result).to.deep.equal([
           { p1: 1, p2: 2 },
@@ -345,7 +345,7 @@ describe("Tree", function() {
       thing.push({id: 4, name: "Pie", type_id: 3});
 
       let join = new Join(thingRelation, typeRelation);
-      typeRelation.predicates.push(new Expression(({thing, type}, params) => thing.type_id == type.id && params.p1 < params.p2, {thing: thingRelation, type: typeRelation}));
+      typeRelation.predicates.push(new Expression(function({thing, type}) { return thing.type_id == type.id && this.params.p1 < this.params.p2 }, {thing: thingRelation, type: typeRelation}));
       return resultArray(join.execute(context)).then(result => {
         expect(result).to.deep.equal([
           {
@@ -467,8 +467,8 @@ describe("Tree", function() {
       visitor.GroupBy = sandbox.stub();
       visitor.NamedRelation = sandbox.stub();
       let groupBy = new GroupBy(thingRelation,
-        new Expression(({thing}, $p, $g) => ({ type_id: thing.type_id, totalCalories: ($g[0] = sum($g[0], thing.calories)).value }), {thing}),
-        new Expression(({thing}, $p) => ({ type_id: thing.type_id }), {thing}));
+        new Expression(({thing}, $g) => ({ type_id: thing.type_id, totalCalories: ($g[0] = sum($g[0], thing.calories)).value }), {thing}),
+        new Expression(({thing}) => ({ type_id: thing.type_id }), {thing}));
       traverse(groupBy, visitor);
       sinon.assert.calledOnce(visitor.GroupBy);
       sinon.assert.calledOnce(visitor.NamedRelation);
@@ -476,15 +476,15 @@ describe("Tree", function() {
 
     it("schema", function() {
       let groupBy = new GroupBy(thingRelation,
-        new Expression(({thing}, $p, $g) => ({ type_id: thing.type_id, totalCalories: ($g[0] = sum($g[0], thing.calories)).value }), {thing}),
-        new Expression(({thing}, $p) => ({ type_id: thing.type_id }), {thing}));
+        new Expression(({thing}, $g) => ({ type_id: thing.type_id, totalCalories: ($g[0] = sum($g[0], thing.calories)).value }), {thing}),
+        new Expression(({thing}) => ({ type_id: thing.type_id }), {thing}));
       expect(groupBy.schema()).to.be.undefined;
     })
 
     it("calculates aggregate", function() {
       let groupBy = new GroupBy(thingRelation,
-        new Expression(({thing}, $p, $g) => ({ type_id: thing.type_id, totalCalories: ($g[0] = sum($g[0], thing.calories)).value }), {thing}),
-        new Expression(({thing}, $p) => ({ type_id: thing.type_id }), {thing}));
+        new Expression(({thing}, $g) => ({ type_id: thing.type_id, totalCalories: ($g[0] = sum($g[0], thing.calories)).value }), {thing}),
+        new Expression(({thing}) => ({ type_id: thing.type_id }), {thing}));
       return resultArray(groupBy.execute(context)).then(result => {
         expect(result).to.deep.equal([
           { type_id: 1, totalCalories: 200 },
@@ -601,7 +601,7 @@ describe("Tree", function() {
 
     it("ordering function can access parameters", function() {
       let orderBy = new OrderBy(thingRelation,
-        [{expression: new Expression(({thing}, params) => thing.calories * params.factor, {thing}), order: 1}]);
+        [{expression: new Expression(function({thing}) { return thing.calories * this.params.factor }, {thing}), order: 1}]);
       context.params = { factor: -1 };
       return resultArray(orderBy.execute(context)).then(result => {
         expect(result).to.deep.equal([

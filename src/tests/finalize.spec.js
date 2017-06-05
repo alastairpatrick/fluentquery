@@ -48,7 +48,7 @@ describe("Optimize", function() {
       let where = new Where(namedS, termGroups);
 
       expect(hoistPredicates(where)).to.equal(namedS);
-      expect(namedS.predicates.map(p => p.tree())).to.deep.equal(["$cmp(s.id, 1) === 0"]);
+      expect(namedS.predicates.map(p => p.tree())).to.deep.equal(["$$cmp(s.id, 1) === 0"]);
     })
 
     it("hoists Where predicate to left NamedRelation of inner Join", function() {
@@ -59,7 +59,7 @@ describe("Optimize", function() {
       
       expect(hoistPredicates(where)).to.equal(join);
       expect(join.predicates).to.deep.equal([]);
-      expect(namedS.predicates.map(p => p.tree())).to.deep.equal(["$cmp(s.id, 1) === 0"]);
+      expect(namedS.predicates.map(p => p.tree())).to.deep.equal(["$$cmp(s.id, 1) === 0"]);
       expect(namedT.predicates).to.deep.equal([]);
     })
 
@@ -71,7 +71,7 @@ describe("Optimize", function() {
       
       expect(hoistPredicates(where)).to.equal(join);
       expect(join.predicates).to.deep.equal([]);
-      expect(namedS.predicates.map(p => p.tree())).to.deep.equal(["$cmp(s.id, 1) === 0"]);
+      expect(namedS.predicates.map(p => p.tree())).to.deep.equal(["$$cmp(s.id, 1) === 0"]);
       expect(namedT.predicates).to.deep.equal([]);
     })
 
@@ -84,7 +84,7 @@ describe("Optimize", function() {
       expect(hoistPredicates(where)).to.equal(join);
       expect(join.predicates).to.deep.equal([]);
       expect(namedS.predicates).to.deep.equal([]);
-      expect(namedT.predicates.map(p => p.tree())).to.deep.equal(["$cmp(t.id, 1) === 0"]);
+      expect(namedT.predicates.map(p => p.tree())).to.deep.equal(["$$cmp(t.id, 1) === 0"]);
     })
 
     it("hoists Where predicate to right NamedRelation of inner Join even if it depends on left and right", function() {
@@ -97,7 +97,7 @@ describe("Optimize", function() {
       expect(hoistPredicates(where)).to.equal(join);
       expect(join.predicates).to.deep.equal([]);
       expect(namedS.predicates).to.deep.equal([]);
-      expect(namedT.predicates.map(p => p.tree())).to.deep.equal(["$cmp(t.id, s.id) === 0"]);
+      expect(namedT.predicates.map(p => p.tree())).to.deep.equal(["$$cmp(t.id, s.id) === 0"]);
     })
 
     it("hoists Where predicate to left NamedRelation of outer Join", function() {
@@ -107,7 +107,7 @@ describe("Optimize", function() {
       let where = new Where(join, termGroups);
       
       expect(hoistPredicates(where)).to.equal(join);
-      expect(namedS.predicates.map(p => p.tree())).to.deep.equal(["$cmp(s.id, 1) === 0"]);
+      expect(namedS.predicates.map(p => p.tree())).to.deep.equal(["$$cmp(s.id, 1) === 0"]);
       expect(namedT.predicates).to.deep.equal([]);
     })
 
@@ -133,7 +133,7 @@ describe("Optimize", function() {
       
       expect(hoistPredicates(where)).to.equal(join);
       expect(namedS.predicates).to.deep.equal([]);
-      expect(namedT.predicates.map(p => p.tree())).to.deep.equal(["$cmp(t.id, s.id) === 0"]);
+      expect(namedT.predicates.map(p => p.tree())).to.deep.equal(["$$cmp(t.id, s.id) === 0"]);
     })
 
     it("does not hoist Where predicate above GroupBy that it filters", function() {
@@ -149,7 +149,7 @@ describe("Optimize", function() {
       let where = new Where(groupBy, termGroups);
       
       expect(hoistPredicates(where)).to.equal(where);
-      expect(where.predicates.map(p => p.tree())).to.deep.equal(["$cmp(id, 1) === 0"]);
+      expect(where.predicates.map(p => p.tree())).to.deep.equal(["$$cmp(id, 1) === 0"]);
       expect(namedS.predicates).to.deep.equal([]);
     })
 
@@ -158,7 +158,7 @@ describe("Optimize", function() {
       joinST.termGroups.parse("s.id == 1", {s: namedS});
       
       expect(hoistPredicates(joinST)).to.equal(joinST);
-      expect(namedS.predicates.map(p => p.tree())).to.deep.equal(["$cmp(s.id, 1) === 0"]);
+      expect(namedS.predicates.map(p => p.tree())).to.deep.equal(["$$cmp(s.id, 1) === 0"]);
       expect(namedT.predicates).to.deep.equal([]);      
     })
 
@@ -168,7 +168,7 @@ describe("Optimize", function() {
       
       expect(hoistPredicates(joinST)).to.equal(joinST);
       expect(namedS.predicates).to.deep.equal([]);      
-      expect(namedT.predicates.map(p => p.tree())).to.deep.equal(["$cmp(t.id, 1) === 0"]);
+      expect(namedT.predicates.map(p => p.tree())).to.deep.equal(["$$cmp(t.id, 1) === 0"]);
     })
 
     it("hoists Join predicates that depend on both left and right relation to right", function() {
@@ -177,7 +177,7 @@ describe("Optimize", function() {
       
       expect(hoistPredicates(joinST)).to.equal(joinST);
       expect(namedS.predicates).to.deep.equal([]);      
-      expect(namedT.predicates.map(p => p.tree())).to.deep.equal(["$cmp(s.id, t.id) === 0"]);
+      expect(namedT.predicates.map(p => p.tree())).to.deep.equal(["$$cmp(s.id, t.id) === 0"]);
     })
 
     it("hoists Where key ranges to NamedRelation", function() {

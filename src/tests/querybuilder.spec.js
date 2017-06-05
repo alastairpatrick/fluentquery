@@ -61,13 +61,13 @@ describe("fluentquery query builder", function() {
 
     expect(query.tree()).to.deep.equal({
       class: "Select",
-      selector: '{ name: thing[$subs[0]] }',
+      selector: '{ name: thing[$$subs[0]] }',
       relation: "thing",
     });
 
     expect(query.relation().selector.expandedTree()).to.deep.equal({
       class: "Expression",
-      source: '{ name: thing[$subs[0]] }',
+      source: '{ name: thing[$$subs[0]] }',
       dependencies: ["thing"],
     });
   })
@@ -320,7 +320,7 @@ describe("fluentquery query builder", function() {
   it("builds where", function() {
     let query = select `{name: thing.name}`
                  .from ({thing})
-                .where `thing.id === $p.id1 || thing.id === $p.id2`;
+                .where `thing.id === $id1 || thing.id === $id2`;
 
     expect(query.tree()).to.deep.equal({
       class: "Select",
@@ -330,7 +330,7 @@ describe("fluentquery query builder", function() {
         relation: "thing",
         termGroups: [{
           dependencies: ["thing"],
-          expression: "thing.id === $p.id1 || thing.id === $p.id2",
+          expression: "thing.id === this.params.id1 || thing.id === this.params.id2",
         }],
       },
     });
@@ -339,7 +339,7 @@ describe("fluentquery query builder", function() {
   it("splits where terms", function() {
     let query = select `{name: thing.name}`
                  .from ({thing})
-                .where `thing.id !== $p.id1 && thing.id !== $p.id2`;
+                .where `thing.id !== $id1 && thing.id !== $id2`;
 
     expect(query.tree()).to.deep.equal({
       class: "Select",
@@ -349,7 +349,7 @@ describe("fluentquery query builder", function() {
         relation: "thing",
         termGroups: [{
           dependencies: ["thing"],
-          expression: "thing.id !== $p.id1 && thing.id !== $p.id2",
+          expression: "thing.id !== this.params.id1 && thing.id !== this.params.id2",
         }],
       },
     });
@@ -364,7 +364,7 @@ describe("fluentquery query builder", function() {
 
     expect(query.tree()).to.deep.equal({
       class: "GroupBy",
-      selector: "$g[0] = sum($g[0], thing.calories), { type_id: thing.type_id, totalCalories: $g[0].value }",
+      selector: "$$g[0] = sum($$g[0], thing.calories), { type_id: thing.type_id, totalCalories: $$g[0].value }",
       grouper: "{ type_id: thing.type_id }",
       relation: "thing",
     });

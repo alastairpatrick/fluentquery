@@ -133,13 +133,13 @@ describe("Range", function() {
 
   describe("RangeExpression", function() {
     it("executes", function() {
-      let range = new RangeExpression(({t}) => t.a, ({}, $p) => $p.age, "t.a", "$p.age", true, true);
+      let range = new RangeExpression(({t}) => t.a, function({}) { return this.params.age }, "t.a", "this.params.age", true, true);
       context.params = { age: 18 };
       context.tuple = { t: { a: 1, b: 2 } };
       expect(range.tree()).to.deep.equal({
         class: "RangeExpression",
         lower: "t.a",
-        upper: "$p.age",
+        upper: "this.params.age",
         lowerOpen: true,
         upperOpen: true,
       });
@@ -155,7 +155,7 @@ describe("Range", function() {
     });
 
     it("lower may be unbounded", function() {
-      let range = new RangeExpression(undefined, ({}, $p) => $p.b, "undefined", "$p.b", false, false);
+      let range = new RangeExpression(undefined, function({}) { return this.params.b }, "undefined", "this.params.b", false, false);
       context.params = {
         b: 2,
       };
@@ -168,7 +168,7 @@ describe("Range", function() {
     });
 
     it("upper may be unbounded", function() {
-      let range = new RangeExpression(({}, $p) => $p.a, undefined, "$p.a", "undefined");
+      let range = new RangeExpression(function({}) { return this.params.a }, undefined, "this.params.a", "undefined");
       context.params = {
         a: 1,
       };

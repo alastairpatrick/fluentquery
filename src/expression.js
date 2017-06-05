@@ -19,14 +19,13 @@ const RANGE_OPS = {
 };
 
 const RESERVED_IDS = {
-  "$g": true,
-  "$p": true,
-  "$subs": true,
+  "$$g": true,
+  "$$subs": true,
 }
 
 const expressionScope = {
   cmp,
-  $cmp: cmp,
+  $$cmp: cmp,
 }
 expressionScope.global = expressionScope;
 Object.assign(expressionScope, stdAggregates);
@@ -68,14 +67,14 @@ const compileNode = (node, dependencies, substitutions) => {
   if (jsTuple.length)
     jsWrapped += '{' + jsTuple + '}';
   else
-    jsWrapped += "$_";
+    jsWrapped += "$$_";
 
-  jsWrapped += ", $p, $g) { return " + js + " }";
+  jsWrapped += ", $$g) { return " + js + " }";
 
   let parameters = Object.keys(expressionScope);
   let args = parameters.map(n => expressionScope[n]);
 
-  let fn = new Function("$subs", ...parameters, jsWrapped)(substitutions, ...args);
+  let fn = new Function("$$subs", ...parameters, jsWrapped)(substitutions, ...args);
   fn.source = js;
   return fn;
 }
@@ -88,11 +87,10 @@ class Expression {
   }
 
   prepare(context) {
-    let params = context.params;
     if (this.tuple)
-      return (tuple, group) => this.fn(Object.assign({}, this.tuple, tuple), params, group);
+      return (tuple, group) => this.fn.call(context, Object.assign({}, this.tuple, tuple), group);
     else
-      return (tuple, group) => this.fn(tuple, params, group);
+      return (tuple, group) => this.fn.call(context, tuple, group);
   }
 
   partial(tuple) {
@@ -187,7 +185,7 @@ const extractKeyRanges = (node, complement, dependencies) => {
     } else {
       if (!types.isCallExpression(node.left))
         return undefined;
-      if (!types.isIdentifier(node.left.callee, { name: "$cmp" }))
+      if (!types.isIdentifier(node.left.callee, { name: "$$cmp" }))
         return undefined;
       if (!types.isNumericLiteral(node.right, { value: 0 }))
         return undefined;
@@ -339,7 +337,7 @@ class Term {
 }
 
 const groupExpression = (groupIdx) => {
-  return types.memberExpression(types.identifier("$g"), types.numericLiteral(groupIdx), true);
+  return types.memberExpression(types.identifier("$$g"), types.numericLiteral(groupIdx), true);
 }
 
 class TermGroups {
@@ -374,7 +372,7 @@ class TermGroups {
       for (let i = 0; i < template.length; ++i) {
         js += template[i];
         if (i < substitutions.length)
-          js += ` ($subs[${this.substitutions.length + i}]) `;
+          js += ` ($$subs[${this.substitutions.length + i}]) `;
       }
       this.substitutions = this.substitutions.concat(substitutions);
     } else {
@@ -401,7 +399,7 @@ class TermGroups {
     let groupIdx = 0;
     traverse(ast, {
       MemberExpression(path) {
-        if (path.get("object").isIdentifier({ name: "$subs" })) {
+        if (path.get("object").isIdentifier({ name: "$$subs" })) {
           let subsPath = path.get("property");
           types.assertNumericLiteral(subsPath.node);
           this.substitutionNodes.push(subsPath.node);
@@ -413,7 +411,7 @@ class TermGroups {
         let op = RANGE_OPS[node.operator];
         if (op !== undefined && !generated.has(node)) {
           let replacement = types.binaryExpression(op,
-            types.callExpression(types.identifier("$cmp"), [node.left, node.right]),
+            types.callExpression(types.identifier("$$cmp"), [node.left, node.right]),
             types.numericLiteral(0));
 
           generated.add(replacement);
@@ -457,9 +455,15 @@ class TermGroups {
 
           if (path.isReferencedIdentifier()) {
             if (!scope.hasBinding(node.name)) {
-              if (node.name[0] === "$") {
-                if (!has.call(RESERVED_IDS, node.name) && !has.call(expressionScope, node.name))
-                  throw new Error(`Variables beginning '$' are reserved but found '${node.name}'.`);
+              if (node.name[0] === "$" ) {
+                if (node.name[1] === "$") {
+                  if (!has.call(RESERVED_IDS, node.name) && !has.call(expressionScope, node.name))
+                    throw new Error(`Variables beginning '$$' are reserved but found '${node.name}'.`);
+                } else {
+                  path.replaceWith(types.memberExpression(
+                    types.memberExpression(types.thisExpression(), types.identifier("params")),
+                    types.identifier(node.name.substring(1))));
+                }
               } else if(!has.call(expressionScope, node.name)) {
                 if (schema !== undefined) {
                   if (!has.call(schema, node.name))

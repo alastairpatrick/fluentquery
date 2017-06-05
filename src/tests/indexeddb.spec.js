@@ -447,9 +447,9 @@ describe("IndexedDB integration", function() {
   })
 
   it("can execute queries in particular transaction", function() {
-    let updateTitle = update `{ title: $p.newTitle }`
+    let updateTitle = update `{ title: $newTitle }`
                        .into (book)
-                      .where `old.isbn == $p.isbn`
+                      .where `old.isbn == $isbn`
 
     let findBuffaloes = select `book`
                          .from ({book})

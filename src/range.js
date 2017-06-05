@@ -134,11 +134,10 @@ class RangeExpression {
   }
 
   prepare(context) {
-    let params = context.params;
     let tuple = context.tuple;
     return new Range(
-      this.lowerFn ? this.lowerFn(tuple, params) : undefined,
-      this.upperFn ? this.upperFn(tuple, params) : undefined,
+      this.lowerFn ? this.lowerFn.call(context, tuple) : undefined,
+      this.upperFn ? this.upperFn.call(context, tuple) : undefined,
       this.lowerOpen,
       this.upperOpen
     ).prepare(context);
