@@ -408,7 +408,7 @@ describe("IndexedDB integration", function() {
   })
 
   it("can update tuples in object store", function() {
-    let query = update `{ title: old.title.toLowerCase() }`
+    let query = update `{ title: this.title.toLowerCase() }`
                  .into (book)
 
     return query.then(result => {
@@ -430,7 +430,7 @@ describe("IndexedDB integration", function() {
 
   it("can delete tuples from object store", function() {
     let query = deleteFrom (book)
-                    .where `old.isbn == 234567`
+                    .where `this.isbn == 234567`
 
     return query.then(result => {
       expect(result).to.deep.equal([
@@ -449,7 +449,7 @@ describe("IndexedDB integration", function() {
   it("can execute queries in particular transaction", function() {
     let updateTitle = update `{ title: $newTitle }`
                        .into (book)
-                      .where `old.isbn == $isbn`
+                      .where `this.isbn == $isbn`
 
     let findBuffaloes = select `book`
                          .from ({book})

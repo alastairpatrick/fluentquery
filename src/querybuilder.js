@@ -166,7 +166,7 @@ const newQuery = (command) => {
 
       if (command === "update") {
         selector = Array.from(selector);
-        selector[0] = "Object.assign({}, old, " + selector[0];
+        selector[0] = "Object.assign({}, this, " + selector[0];
         selector[selector.length - 1] += ")";
       }
 
@@ -183,7 +183,7 @@ const newQuery = (command) => {
       into = table;
 
       if (command === "update" || command === "delete")
-        buildRelation = makeInnerJoin({old: table});
+        buildRelation = makeInnerJoin({"$$this": table});
 
       return chain(buildRelation);
     },
@@ -351,7 +351,7 @@ const update = (selector, ...args) => {
 };
 
 const deleteFrom = (table) => {
-  return newQuery("delete").select("old").into(table);
+  return newQuery("delete").select("this").into(table);
 }
 
 module.exports = {

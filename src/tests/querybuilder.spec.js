@@ -525,15 +525,15 @@ describe("fluentquery query builder", function() {
   })
 
   it("builds update", function() {
-    let query = update `{name: old.name.toLowerCase()}`
+    let query = update `{name: this.name.toLowerCase()}`
                  .into (thingStore)
 
     expect(query.tree()).to.deep.equal({
       class: "Write",
       relation: {
         class: "Select",
-        selector: "Object.assign({}, old, { name: old.name.toLowerCase() })",
-        relation: "old",
+        selector: "Object.assign({}, $$this, { name: $$this.name.toLowerCase() })",
+        relation: "$$this",
       },
       table: {
         class: "ArrayTable",
@@ -552,8 +552,8 @@ describe("fluentquery query builder", function() {
       class: "Write",
       relation: {
         class: "Select",
-        selector: "old",
-        relation: "old",
+        selector: "$$this",
+        relation: "$$this",
       },
       table: {
         class: "ArrayTable",

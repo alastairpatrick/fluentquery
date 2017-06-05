@@ -21,6 +21,7 @@ const RANGE_OPS = {
 const RESERVED_IDS = {
   "$$g": true,
   "$$subs": true,
+  "$$this": true,
 }
 
 const expressionScope = {
@@ -444,6 +445,11 @@ class TermGroups {
         }
       },
 
+      ThisExpression(path) {
+        if (!generated.has(path.node))
+          path.replaceWith(types.identifier("$$this"));
+      },
+
       Expression: {
         enter(path) {
           let { node, scope } = path;
@@ -455,13 +461,15 @@ class TermGroups {
 
           if (path.isReferencedIdentifier()) {
             if (!scope.hasBinding(node.name)) {
-              if (node.name[0] === "$" ) {
+              if (node.name[0] === "$" && node.name !== "$$this") {
                 if (node.name[1] === "$") {
                   if (!has.call(RESERVED_IDS, node.name) && !has.call(expressionScope, node.name))
                     throw new Error(`Variables beginning '$$' are reserved but found '${node.name}'.`);
                 } else {
+                  let thisExpression = types.thisExpression();
+                  generated.add(thisExpression);
                   path.replaceWith(types.memberExpression(
-                    types.memberExpression(types.thisExpression(), types.identifier("params")),
+                    types.memberExpression(thisExpression, types.identifier("params")),
                     types.identifier(node.name.substring(1))));
                 }
               } else if(!has.call(expressionScope, node.name)) {
