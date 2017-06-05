@@ -398,4 +398,32 @@ describe("IndexedDB integration", function() {
       });
     });
   })
+
+  it("can execute queries in particular transaction", function() {
+    let updateTitle = update `{ title: $p.newTitle }`
+                       .into (book)
+                      .where `old.isbn == $p.isbn`
+
+    let findBuffaloes = select `book`
+                         .from ({book})
+                        .where `book.title == "Water Buffaloes"`
+
+    let transaction = db.transaction(["book"], "readwrite");
+    let found;
+    return findBuffaloes({}, transaction).toArray().toPromise().then(books => {
+      return updateTitle({isbn: books[0].isbn, newTitle: "Replaced"}, transaction).toArray().toPromise();
+    }).then(updated => {
+      let query = select `{title: book.title, isbn: book.isbn}`
+                  .from ({book})
+                .orderBy `book.title`;
+
+      return resultArray(query()).then(result => {
+        expect(result).to.deep.equal([
+          {isbn: 345678, title: "Bedrock Nights"},
+          {isbn: 123456, title: "Quarry Memories"},
+          {isbn: 234567, title: "Replaced"},
+        ]);
+      });
+    });
+  })
 })

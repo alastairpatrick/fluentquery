@@ -12,6 +12,8 @@ require("rxjs/add/operator/mergeMap");
 require("rxjs/add/operator/publishReplay");
 require("rxjs/add/operator/reduce");
 require("rxjs/add/operator/toArray");
+require("rxjs/add/operator/toPromise");
+require("rxjs/add/operator/take");
 
 module.exports = {
   Observable,

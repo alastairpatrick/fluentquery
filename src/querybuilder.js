@@ -83,9 +83,11 @@ const newQuery = (command) => {
   let into = undefined;
   let memoize = false;
 
-  const query = (params={}) => {
-    let context = new Context(params);
+  const query = (params={}, transaction=undefined) => {
     let relation = query.finalize();
+
+    let context = new Context(params);
+    context.transaction = transaction;
     return context.execute(relation);
   }
 

@@ -215,7 +215,8 @@ class IDBTransaction {
 
   execute(context) {
     context.db = this.db;
-    context.transaction = this.db.transaction(Array.from(this.tableNames), this.mode);    
+    if (context.transaction === undefined)
+      context.transaction = this.db.transaction(Array.from(this.tableNames), this.mode);
     return context.execute(this.relation);
   }
 
