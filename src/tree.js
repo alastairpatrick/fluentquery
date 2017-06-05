@@ -144,7 +144,6 @@ class Write extends Relation {
     
     let method;
     if (this.options.delete) {
-      observable = observable.map(tuple => tuple.old);
       method = this.table.delete.bind(this.table);
     } else {
       method = this.table.put.bind(this.table);

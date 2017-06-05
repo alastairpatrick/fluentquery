@@ -351,7 +351,7 @@ const update = (selector, ...args) => {
 };
 
 const deleteFrom = (table) => {
-  return newQuery("delete").into(table);
+  return newQuery("delete").select("old").into(table);
 }
 
 module.exports = {

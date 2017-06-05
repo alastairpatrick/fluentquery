@@ -550,7 +550,11 @@ describe("fluentquery query builder", function() {
 
     expect(query.tree()).to.deep.equal({
       class: "Write",
-      relation: "old",
+      relation: {
+        class: "Select",
+        selector: "old",
+        relation: "old",
+      },
       table: {
         class: "ArrayTable",
       },
