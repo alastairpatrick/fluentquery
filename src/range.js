@@ -124,11 +124,9 @@ const includes = (ranges) => (v) => {
 }
 
 class RangeExpression {
-  constructor(lowerFn, upperFn, lowerSource, upperSource, lowerOpen=false, upperOpen=false) {
+  constructor(lowerFn, upperFn, lowerOpen=false, upperOpen=false) {
     this.lowerFn = lowerFn;
-    this.lowerSource = lowerSource;
     this.upperFn = upperFn;
-    this.upperSource = upperSource;
     this.lowerOpen = lowerOpen;
     this.upperOpen = upperOpen;
   }
@@ -148,9 +146,9 @@ class RangeExpression {
       class: this.constructor.name,
     };
     if (this.lowerFn !== undefined)
-      result.lower = this.lowerSource || this.lowerFn.source;
+      result.lower = this.lowerFn.source || this.lowerFn.toString();
     if (this.upperFn !== undefined)
-      result.upper = this.upperSource || this.upperFn.source;
+      result.upper = this.upperFn.source || this.upperFn.toString();
     if (this.lowerOpen)
       result.lowerOpen = this.lowerOpen;
     if (this.upperOpen)

@@ -201,7 +201,7 @@ const extractKeyRanges = (node, complement, dependencies) => {
         delete keyRangeDependencies[key.dependency];
 
         let fn = compileNode(args[1 - i], keyRangeDependencies);
-        let keyRange = new RangeExpression(fn, fn, undefined, undefined);
+        let keyRange = new RangeExpression(fn, fn);
 
         if (op === "===") {
           if (complement)
