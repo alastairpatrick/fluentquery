@@ -1,7 +1,5 @@
 "use strict";
 
-const Symbol = require('es6-symbol');
-
 const { TermGroups, parseExpression } = require("./expression");
 const { finalize } = require("./finalize");
 const { traverse } = require("./traverse");
