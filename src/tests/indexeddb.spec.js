@@ -13,6 +13,7 @@ const {
   Context,
   IDBTable,
   IDBTransaction,
+  PrimaryKey,
   Range,
   deleteFrom,
   select,
@@ -40,11 +41,11 @@ const createDatabase = () => {
       book.put({title: "Water Buffaloes", author: "Fred", isbn: 234567});
       book.put({title: "Bedrock Nights", author: "Barney", isbn: 345678});
 
-      let store = db.createObjectStore("store", {keyPath: "id", autoIncrement: true});
+      let store = db.createObjectStore("store", {keyPath: null, autoIncrement: true});
       store.createIndex("byCity", "city", {unique: false});
-      store.put({id: 1, city: "San Francisco"});
-      store.put({id: 2, city: "San Francisco"});
-      store.put({id: 3, city: "New York City"});
+      store.put({city: "San Francisco"});
+      store.put({city: "San Francisco"});
+      store.put({city: "New York City"});
 
       let inventoryItem = db.createObjectStore("inventoryItem", {keyPath: ["storeId", "isbn"]});
       inventoryItem.createIndex("byStoreId", "storeId", {unique: false});
@@ -228,16 +229,16 @@ describe("IndexedDB integration", function() {
 
       return resultArray(observable).then(results => {
         expect(results).to.deep.equal([
-          {id: 4, city: "Boston"},
+          {[PrimaryKey]: 4, city: "Boston"},
         ]);
 
         let observable = store.execute(context);
         return resultArray(observable).then(results => {
           expect(results).to.deep.equal([
-            {id: 1, city: "San Francisco"},
-            {id: 2, city: "San Francisco"},
-            {id: 3, city: "New York City"},
-            {id: 4, city: "Boston"},
+            {[PrimaryKey]: 1, city: "San Francisco"},
+            {[PrimaryKey]: 2, city: "San Francisco"},
+            {[PrimaryKey]: 3, city: "New York City"},
+            {[PrimaryKey]: 4, city: "Boston"},
           ]);
         });
       });
@@ -279,19 +280,19 @@ describe("IndexedDB integration", function() {
 
     it("deletes rows", function() {
       let observable = store.delete(context, [
-        {id: 3}
+        {[PrimaryKey]: 3}
       ]);
 
       return resultArray(observable).then(results => {
         expect(results).to.deep.equal([
-          {id: 3},
+          {[PrimaryKey]: 3},
         ]);
 
         let observable = store.execute(context);
         return resultArray(observable).then(results => {
           expect(results).to.deep.equal([
-            {id: 1, city: "San Francisco"},
-            {id: 2, city: "San Francisco"},
+            {[PrimaryKey]: 1, city: "San Francisco"},
+            {[PrimaryKey]: 2, city: "San Francisco"},
           ]);
         });
       });
@@ -366,7 +367,7 @@ describe("IndexedDB integration", function() {
                  .join ({inventoryItem})
                    .on `inventoryItem.isbn == book.isbn`
                  .join ({store})
-                   .on `store.id == inventoryItem.storeId`
+                   .on `store[PrimaryKey] == inventoryItem.storeId`
                 .where `book.author == 'Fred'`
               .orderBy `book.title`;
 
@@ -399,7 +400,7 @@ describe("IndexedDB integration", function() {
   it("can build join query and execute against object store using its index 2", function() {
     let query = select `{title: book.title, city: store.city, quantity: inventoryItem.quantity}`
                  .from ({book, inventoryItem, store})
-                .where `book.author == 'Fred' && inventoryItem.isbn == book.isbn && store.id == inventoryItem.storeId`
+                .where `book.author == 'Fred' && inventoryItem.isbn == book.isbn && store[PrimaryKey] == inventoryItem.storeId`
               .orderBy `book.title`;
 
     return query.then(result => {

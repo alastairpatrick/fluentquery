@@ -5,10 +5,11 @@ const { Observable } = require("./rx");
 const { IDBKeyRange } = require("./idbbase");
 const { Range, includes } = require("./range");
 const { traversePath } = require("./traverse");
+const { PrimaryKey } = require("./expression");
 const { Table } = require("./tree");
 
 const has = Object.prototype.hasOwnProperty;
-const identity = x => x;
+let identity = x => x;
 
 const idbRange = (range) => {
   if (range.lower === undefined && range.upper === undefined)
@@ -22,12 +23,15 @@ const idbRange = (range) => {
 }
 
 const rangeStream = (source, range) => {
+  let keyPath = source.keyPath;
   return Observable.create(observer => {
     let request = source.openCursor(idbRange(range));
     request.onsuccess = function(event) {
       let cursor = event.target.result;
       if (cursor) {
         cursor.continue();
+        if (keyPath === null)
+          cursor.value[PrimaryKey] = cursor.primaryKey;
         observer.next(cursor.value);
       } else {
         observer.complete();
@@ -40,6 +44,8 @@ const rangeStream = (source, range) => {
 }
 
 const keyPathSetterMemo = Object.create(null);
+keyPathSetterMemo["null"] = (tuple, key) => tuple[PrimaryKey] = key;
+
 const keyPathSetter = (source) => {
   let keyPathKey = JSON.stringify(source.keyPath);
   let setter = keyPathSetterMemo[keyPathKey];
@@ -71,6 +77,8 @@ const keyPathSetter = (source) => {
 }
 
 const keyPathGetterMemo = Object.create(null);
+keyPathGetterMemo["null"] = (tuple) => tuple[PrimaryKey];
+
 const keyPathGetter = (source) => {
   let keyPathKey = JSON.stringify(source.keyPath);
   let getter = keyPathGetterMemo[keyPathKey];

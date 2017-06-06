@@ -10,6 +10,8 @@ const { Range, RangeExpression, RangeIntersection, RangeUnion, includes } = requ
 
 const has = Object.prototype.hasOwnProperty;
 
+const PrimaryKey = Symbol("PK");
+
 const RANGE_OPS = {
   "==": "===",
   ">=": ">=",
@@ -25,6 +27,7 @@ const RESERVED_IDS = {
 }
 
 const expressionScope = {
+  PrimaryKey,
   cmp,
   $$cmp: cmp,
 }
@@ -537,6 +540,7 @@ const parseExpression = (template, schema, substitutions, options) => {
 
 module.exports = {
   Expression,
+  PrimaryKey,
   TermGroups,
   expressionScope,
   parseExpression,
