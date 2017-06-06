@@ -5,7 +5,7 @@ require("./indexeddb-fill.js");
 const { expect } = require("chai");
 const sinon = require("sinon");
 
-const { Context, Range, RangeExpression, RangeIntersection, RangeUnion, includes } = require("..");
+const { Context, Range, RangeExpression, RangeIntersection, RangeUnion, includes, nextUp } = require("..");
 
 
 describe("Range", function() {
@@ -754,4 +754,52 @@ describe("Range", function() {
       ]);
     });
   })
+
+  describe("nextUp", function() {
+    it("returns the maximum negative representable finite number after -ve infinity", function() {
+      expect(nextUp(-Infinity)).to.equal(-Number.MAX_VALUE);
+    });
+
+    it("returns the infinity after the maximum positive representable finite number", function() {
+      expect(nextUp(Number.MAX_VALUE)).to.equal(Infinity);
+    });
+
+    it("returns the earliest representable date after infinity", function() {
+      expect(nextUp(Infinity).getTime()).to.equal(-8640000000000000);
+    });
+
+    it("after a date, returns one millisecond later", function() {
+      expect(nextUp(new Date(1000)).getTime()).to.equal(1001);
+    });
+
+    it("returns the empty string after the latest representable date", function() {
+      expect(nextUp(new Date(8640000000000000))).to.equal("");
+    });
+
+    it("after any string, returns that string with a null character appended", function() {
+      expect(nextUp("abc")).to.equal("abc\0");
+    });
+
+    it("after any array, returns that array with a -Infinity element appended", function() {
+      expect(nextUp(["a", 7])).to.deep.equal(["a", 7, -Infinity]);
+    });
+
+    it("is used to implement Range.openUpper if its upper bound is closed", function() {
+      expect(new Range("a", "b", false, false).openUpper().tree()).to.deep.equal({
+        class: "Range",
+        lower: "a",
+        upper: "b\0",
+        upperOpen: true,
+      });
+    });
+
+    it("is used to implement Range.openUpper unless its upper bound is already open", function() {
+      expect(new Range("a", "b", false, true).openUpper().tree()).to.deep.equal({
+        class: "Range",
+        lower: "a",
+        upper: "b",
+        upperOpen: true,
+      });
+    });
+  });
 })

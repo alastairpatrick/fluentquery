@@ -22,10 +22,10 @@ const idbRange = (range) => {
     return IDBKeyRange.upperBound(range.upper, range.upperOpen);
 }
 
-const rangeStream = (source, range) => {
+const rangeStream = (source, idbRange) => {
   let keyPath = source.keyPath;
   return Observable.create(observer => {
-    let request = source.openCursor(idbRange(range));
+    let request = source.openCursor(idbRange);
     request.onsuccess = function(event) {
       let cursor = event.target.result;
       if (cursor) {
@@ -43,6 +43,18 @@ const rangeStream = (source, range) => {
   });
 }
 
+const getKeyPaths = (source) => {
+  if (source.keyPath === null) {
+    return { keyPaths: [] };
+  } else if (typeof source.keyPath == "string") {
+    return { keyPaths: [source.keyPath], array: false };
+  } else if (Array.isArray(source.keyPath)) {
+    return { keyPaths: source.keyPath, array: true };
+  } else {
+    throw new Error(`Key path not supported: '${source.keyPath}'.`);
+  }
+}
+
 const keyPathSetterMemo = Object.create(null);
 keyPathSetterMemo["null"] = (tuple, key) => tuple[PrimaryKey] = key;
 
@@ -52,19 +64,11 @@ const keyPathSetter = (source) => {
   if (setter)
     return setter;
 
-  let keyPaths;
-  if (typeof source.keyPath == "string") {
-    keyPaths = [source.keyPath];
-  } else if (Array.isArray(source.keyPath)) {
-    keyPaths = source.keyPath;
-  } else {
-    throw new Error(`Key path not supported: '${source.keyPath}'.`);
-  }
-
+  let { keyPaths, array } = getKeyPaths(source);
   let js = "";
   keyPaths.forEach((keyPath, i) => {
     let keyPathMemberExpr = keyPath.split(".").reduce((js, k) => js + '[' + JSON.stringify(k) + ']', "tuple");
-    if (Array.isArray(source.keyPath))
+    if (array)
       js += `${keyPathMemberExpr} = key[${i}];\n`;
     else
       js += `${keyPathMemberExpr} = key;\n`;
@@ -85,15 +89,7 @@ const keyPathGetter = (source) => {
   if (getter)
     return getter;
 
-  let keyPaths;
-  if (typeof source.keyPath == "string") {
-    keyPaths = [source.keyPath];
-  } else if (Array.isArray(source.keyPath)) {
-    keyPaths = source.keyPath;
-  } else {
-    throw new Error(`Key path not supported: '${source.keyPath}'.`);
-  }
-
+  let { keyPaths, array } = getKeyPaths(source);
   let js = "";
   let sep = "";
   keyPaths.forEach((keyPath, i) => {
@@ -102,7 +98,7 @@ const keyPathGetter = (source) => {
     sep = ", ";
   });
 
-  if (Array.isArray(source.keyPath))
+  if (array)
     js = "[" + js + "]";
   
   getter = new Function("tuple", "return " + js);
@@ -110,7 +106,6 @@ const keyPathGetter = (source) => {
   keyPathGetterMemo[keyPathKey] = getter;
   return getter;
 }
-
 
 class IDBTable extends Table {
   constructor(db, name) {
@@ -126,45 +121,49 @@ class IDBTable extends Table {
   }
 
   chooseBestIndex(store, keyRanges) {
-    let range;
-    let index;
-
-    let indicesByKeyPath = Object.create(null);
-    indicesByKeyPath[store.keyPath] = store;
+    let best = {};
 
     if (keyRanges !== undefined) {
+      let { keyPaths, array } = getKeyPaths(store);
+
       // Primary key is always best.
-      if (typeof store.keyPath === "string" && has.call(keyRanges, store.keyPath)) {
+      if (has.call(keyRanges, keyPaths[0])) {
         return {
-          range: keyRanges[store.keyPath],
+          range: keyRanges[keyPaths[0]],
           index: store,
+          array,
         }
       }
 
       for (let i = 0; i < store.indexNames.length; ++i) {
         let n = store.indexNames[i];
-        let idx = store.index(n);
-        if (typeof idx.keyPath === "string" && !idx.multiEntry && has.call(keyRanges, idx.keyPath)) {
-            range = keyRanges[idx.keyPath];
-            index = idx;
+        let index = store.index(n);
+        let { keyPaths, array } = getKeyPaths(index);
+        if (!index.multiEntry && has.call(keyRanges, keyPaths[0])) {
+          best = {
+            range: keyRanges[keyPaths[0]],
+            index,
+            array,
+          };
         }
       }
 
       // Prefer unique index
       for (let i = 0; i < store.indexNames.length; ++i) {
         let n = store.indexNames[i];
-        let idx = store.index(n);
-        if (typeof idx.keyPath === "string" && !idx.multiEntry && idx.unique && has.call(keyRanges, idx.keyPath)) {
-            range = keyRanges[idx.keyPath];
-            index = idx;
+        let index = store.index(n);
+        let { keyPaths, array } = getKeyPaths(index);
+        if (!index.multiEntry && index.unique && has.call(keyRanges, keyPaths[0])) {
+          best = {
+            range: keyRanges[keyPaths[0]],
+            index,
+            array,
+          };
         }
       }
     }
 
-    return {
-      range,
-      index,
-    };
+    return best;
   }
 
   execute(context, keyRanges) {
@@ -172,12 +171,22 @@ class IDBTable extends Table {
     let best = this.chooseBestIndex(store, keyRanges);
 
     if (best.range === undefined) {
-      return rangeStream(store, new Range(undefined, undefined));
+      return rangeStream(store, null);
     } else {
       let observable = Observable.empty();
       let ranges = best.range.prepare(context);
-      for (let i = 0; i < ranges.length; ++i)
-        observable = observable.concat(rangeStream(best.index, ranges[i]));
+      for (let i = 0; i < ranges.length; ++i) {
+        let range = ranges[0];
+        if (best.array) {
+          range = range.openUpper();
+          range.lower = [range.lower];
+          range.upper = [range.upper];
+          console.log("toArray", range.tree());
+        }
+        range = idbRange(range);
+      
+        observable = observable.concat(rangeStream(best.index, range));
+      }
 
       return observable;
     }

@@ -130,6 +130,7 @@ describe("IndexedDB integration", function() {
       let best = book.chooseBestIndex(objectStore, keyRanges);
       expect(best.index).to.equal(objectStore);
       expect(best.range).to.equal(keyRanges.isbn);
+      expect(best.array).to.be.false;
     });
 
     it("chooses primary key as index over unique secondary key", function() {
@@ -142,6 +143,7 @@ describe("IndexedDB integration", function() {
       let best = book.chooseBestIndex(objectStore, keyRanges);
       expect(best.index).to.equal(objectStore);
       expect(best.range).to.equal(keyRanges.isbn);
+      expect(best.array).to.be.false;
     });
 
     it("chooses unique secondary key as index over non-unique secondary key", function() {
@@ -154,6 +156,7 @@ describe("IndexedDB integration", function() {
       let best = book.chooseBestIndex(objectStore, keyRanges);
       expect(best.index).to.equal(objectStore.index("byTitle"));
       expect(best.range).to.equal(keyRanges.title);
+      expect(best.array).to.be.false;
     });
 
     it("chooses secondary key as index", function() {
@@ -165,6 +168,7 @@ describe("IndexedDB integration", function() {
       let best = book.chooseBestIndex(objectStore, keyRanges);
       expect(best.index).to.equal(objectStore.index("byAuthor"));
       expect(best.range).to.equal(keyRanges.author);
+      expect(best.array).to.be.false;
     });
 
     it("chooses no key if none relevant", function() {
@@ -176,6 +180,18 @@ describe("IndexedDB integration", function() {
       let best = book.chooseBestIndex(objectStore, keyRanges);
       expect(best.index).to.be.undefined;
       expect(best.range).to.be.undefined;
+    });
+
+    it("chooses composite key even if only first part relevant", function() {
+      let keyRanges = {
+        storeId: new Range("a", "a"),
+      };
+
+      let objectStore = context.transaction.objectStore("inventoryItem");
+      let best = inventoryItem.chooseBestIndex(objectStore, keyRanges);
+      expect(best.index).to.equal(objectStore);
+      expect(best.range).to.equal(keyRanges.storeId);
+      expect(best.array).to.be.true;
     });
 
     it("updates existing rows", function() {
@@ -425,6 +441,27 @@ describe("IndexedDB integration", function() {
           quantity: 2,
           title: "Water Buffaloes",
         }
+      ]);
+    });
+  })
+
+  it("can query using part of composite primary key", function() {
+    let query = select `inventoryItem`
+                 .from ({inventoryItem})
+                .where `inventoryItem.storeId == 2`
+
+    return query.then(result => {
+      expect(result).to.deep.equal([
+        {
+          storeId: 2,
+          isbn: 123456,
+          quantity: 1,
+        },
+        {
+          storeId: 2,
+          isbn: 234567,
+          quantity: 2,
+        },
       ]);
     });
   })

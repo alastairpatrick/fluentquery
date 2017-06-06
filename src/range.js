@@ -1,8 +1,32 @@
 "use strict";
 
 const { cmp } = require("./idbbase");
+const ulp = require("ulp");
 
 const has = Object.prototype.hasOwnProperty;
+
+const MAX_TIME = 8640000000000000;
+
+// Returns least nextV such that cmp(nextV, v) > 0.
+// A range L <= x <= U is equivalent to L <= x < nextUp(U).
+const nextUp = (v) => {
+  if (typeof v === "number") {
+    if (v >= Infinity)
+      return new Date(-MAX_TIME);
+    else
+      return ulp.nextUp(v);
+  } else if (typeof v === "string") {
+    return v + '\0';
+  } else if (Array.isArray(v)) {
+    return v.concat(-Infinity);
+  } else {
+    let time = v.getTime();
+    if (time >= MAX_TIME)
+      return "";
+    else
+      return new Date(time + 1);
+  }
+}
 
 class Range {
   constructor(lower, upper, lowerOpen=false, upperOpen=false) {
@@ -97,6 +121,12 @@ class Range {
 
   copy() {
     return new Range(this.lower, this.upper, this.lowerOpen, this.upperOpen);
+  }
+
+  openUpper() {
+    if (this.upperOpen)
+      return this;
+    return new Range(this.lower, nextUp(this.upper), this.lowerOpen, true);
   }
 
   tree() {
@@ -251,4 +281,5 @@ module.exports = {
   RangeIntersection,
   RangeUnion,
   includes,
+  nextUp,
 };
