@@ -255,6 +255,28 @@ describe("IndexedDB integration", function() {
       });
     })
 
+    it("updates existing row of table with composite key", function() {
+      let observable = inventoryItem.put(context, [
+        {storeId: 1, isbn: 234567, quantity: 44},
+      ]);
+      return resultArray(observable).then(results => {
+        expect(results).to.deep.equal([
+          {storeId: 1, isbn: 234567, quantity: 44},
+        ]);
+
+        let observable = inventoryItem.execute(context);
+        return resultArray(observable).then(results => {
+          expect(results).to.deep.equal([
+            {storeId: 1, isbn: 123456, quantity: 3},
+            {storeId: 1, isbn: 234567, quantity: 44},
+            {storeId: 1, isbn: 345678, quantity: 5},
+            {storeId: 2, isbn: 123456, quantity: 1},
+            {storeId: 2, isbn: 234567, quantity: 2},           
+          ]);
+        });
+      });
+    })
+
     it("deletes rows", function() {
       let observable = store.delete(context, [
         {id: 3}
@@ -270,6 +292,28 @@ describe("IndexedDB integration", function() {
           expect(results).to.deep.equal([
             {id: 1, city: "San Francisco"},
             {id: 2, city: "San Francisco"},
+          ]);
+        });
+      });
+    })
+
+    it("deletes row of table with composite key", function() {
+      let observable = inventoryItem.delete(context, [
+        {storeId: 1, isbn: 234567, quantity: 4},
+      ]);
+
+      return resultArray(observable).then(results => {
+        expect(results).to.deep.equal([
+          {storeId: 1, isbn: 234567, quantity: 4},
+        ]);
+
+        let observable = inventoryItem.execute(context);
+        return resultArray(observable).then(results => {
+          expect(results).to.deep.equal([
+            {storeId: 1, isbn: 123456, quantity: 3},
+            {storeId: 1, isbn: 345678, quantity: 5},
+            {storeId: 2, isbn: 123456, quantity: 1},
+            {storeId: 2, isbn: 234567, quantity: 2},      
           ]);
         });
       });

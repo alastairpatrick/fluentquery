@@ -41,39 +41,68 @@ const rangeStream = (source, range) => {
 
 const keyPathSetterMemo = Object.create(null);
 const keyPathSetter = (source) => {
-  if (typeof source.keyPath == "string") {
-    let setter = keyPathSetterMemo[source.keyPath];
-    if (setter)
-      return setter;
-
-    let keyPath = source.keyPath.split(".");
-    let keyPathJS = keyPath.reduce((js, k) => js + '[' + JSON.stringify(k) + ']', "tuple");
-    setter = new Function("tuple", "key", keyPathJS + " = key");
-
-    keyPathSetterMemo[source.keyPath] = setter;
+  let keyPathKey = JSON.stringify(source.keyPath);
+  let setter = keyPathSetterMemo[keyPathKey];
+  if (setter)
     return setter;
+
+  let keyPaths;
+  if (typeof source.keyPath == "string") {
+    keyPaths = [source.keyPath];
+  } else if (Array.isArray(source.keyPath)) {
+    keyPaths = source.keyPath;
   } else {
-    throw new Error("Non-string keys paths not yet supported");
+    throw new Error(`Key path not supported: '${source.keyPath}'.`);
   }
+
+  let js = "";
+  keyPaths.forEach((keyPath, i) => {
+    let keyPathMemberExpr = keyPath.split(".").reduce((js, k) => js + '[' + JSON.stringify(k) + ']', "tuple");
+    if (Array.isArray(source.keyPath))
+      js += `${keyPathMemberExpr} = key[${i}];\n`;
+    else
+      js += `${keyPathMemberExpr} = key;\n`;
+  });
+
+  setter = new Function("tuple", "key", js);
+
+  keyPathSetterMemo[keyPathKey] = setter;
+  return setter;
 }
 
 const keyPathGetterMemo = Object.create(null);
 const keyPathGetter = (source) => {
-  if (typeof source.keyPath == "string") {
-    let getter = keyPathGetterMemo[source.keyPath];
-    if (getter)
-      return getter;
-
-    let keyPath = source.keyPath.split(".");
-    let keyPathJS = keyPath.reduce((js, k) => js + '[' + JSON.stringify(k) + ']', "tuple");
-    getter = new Function("tuple", "return " + keyPathJS);
-
-    keyPathGetterMemo[source.keyPath] = getter;
+  let keyPathKey = JSON.stringify(source.keyPath);
+  let getter = keyPathGetterMemo[keyPathKey];
+  if (getter)
     return getter;
+
+  let keyPaths;
+  if (typeof source.keyPath == "string") {
+    keyPaths = [source.keyPath];
+  } else if (Array.isArray(source.keyPath)) {
+    keyPaths = source.keyPath;
   } else {
-    throw new Error("Non-string keys paths not yet supported");
+    throw new Error(`Key path not supported: '${source.keyPath}'.`);
   }
+
+  let js = "";
+  let sep = "";
+  keyPaths.forEach((keyPath, i) => {
+    let keyPathMemberExpr = keyPath.split(".").reduce((js, k) => js + '[' + JSON.stringify(k) + ']', "tuple");
+    js += sep + keyPathMemberExpr;
+    sep = ", ";
+  });
+
+  if (Array.isArray(source.keyPath))
+    js = "[" + js + "]";
+  
+  getter = new Function("tuple", "return " + js);
+
+  keyPathGetterMemo[keyPathKey] = getter;
+  return getter;
 }
+
 
 class IDBTable extends Table {
   constructor(db, name) {
