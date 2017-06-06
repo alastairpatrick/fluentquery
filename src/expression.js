@@ -161,23 +161,47 @@ const extractKeyRanges = (node, complement, dependencies) => {
     } else {
       let left = extractKeyRanges(node.left, complement, dependencies)
       let right = extractKeyRanges(node.right, complement, dependencies)
-      if (left === undefined || right === undefined)
-        return undefined;
 
-      for (let keyDependency in left) {
-        if (has.call(left, keyDependency) && has.call(right, keyDependency)) {
-          for (let keyPath in left[keyDependency]) {
-            if (has.call(left[keyDependency], keyPath) && has.call(right[keyDependency], keyPath)) {
+      let intersect = op === "&&";
+      if (complement)
+        intersect = !intersect;
+      if (left !== undefined && right !== undefined) {
+        for (let keyDependency in left) {
+          if (has.call(left, keyDependency) && has.call(right, keyDependency)) {
+            for (let keyPath in left[keyDependency]) {
+              if (has.call(left[keyDependency], keyPath) && has.call(right[keyDependency], keyPath)) {
+                if (!has.call(result, keyDependency))
+                  result[keyDependency] = {};
+
+                result[keyDependency][keyPath] = intersect
+                  ? new RangeIntersection(left[keyDependency][keyPath], right[keyDependency][keyPath])
+                  : new RangeUnion(left[keyDependency][keyPath], right[keyDependency][keyPath]);
+              }
+            }
+          }
+        }
+
+        if (intersect) {
+          for (let keyDependency in left) {
+            if (has.call(left, keyDependency)) {
               if (!has.call(result, keyDependency))
                 result[keyDependency] = {};
-
-              let intersect = op === "&&";
-              if (complement)
-                intersect = !intersect;
-
-              result[keyDependency][keyPath] = intersect
-                ? new RangeIntersection(left[keyDependency][keyPath], right[keyDependency][keyPath])
-                : new RangeUnion(left[keyDependency][keyPath], right[keyDependency][keyPath]);
+              for (let keyPath in left[keyDependency]) {
+                if (has.call(left[keyDependency], keyPath) && !has.call(result[keyDependency], keyPath)) {
+                  result[keyDependency][keyPath] = left[keyDependency][keyPath];
+                }
+              }
+            }
+          }
+          for (let keyDependency in right) {
+            if (has.call(right, keyDependency)) {
+              if (!has.call(result, keyDependency))
+                result[keyDependency] = {};
+              for (let keyPath in right[keyDependency]) {
+                if (has.call(right[keyDependency], keyPath) && !has.call(result[keyDependency], keyPath)) {
+                  result[keyDependency][keyPath] = right[keyDependency][keyPath];
+                }
+              }
             }
           }
         }

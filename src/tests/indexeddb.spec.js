@@ -129,7 +129,7 @@ describe("IndexedDB integration", function() {
       let objectStore = context.transaction.objectStore("book");
       let best = book.chooseBestIndex(objectStore, keyRanges);
       expect(best.index).to.equal(objectStore);
-      expect(best.range).to.equal(keyRanges.isbn);
+      expect(best.ranges).to.deep.equal([keyRanges.isbn]);
       expect(best.array).to.be.false;
     });
 
@@ -142,7 +142,7 @@ describe("IndexedDB integration", function() {
       let objectStore = context.transaction.objectStore("book");
       let best = book.chooseBestIndex(objectStore, keyRanges);
       expect(best.index).to.equal(objectStore);
-      expect(best.range).to.equal(keyRanges.isbn);
+      expect(best.ranges).to.deep.equal([keyRanges.isbn]);
       expect(best.array).to.be.false;
     });
 
@@ -155,7 +155,7 @@ describe("IndexedDB integration", function() {
       let objectStore = context.transaction.objectStore("book");
       let best = book.chooseBestIndex(objectStore, keyRanges);
       expect(best.index).to.equal(objectStore.index("byTitle"));
-      expect(best.range).to.equal(keyRanges.title);
+      expect(best.ranges).to.deep.equal([keyRanges.title]);
       expect(best.array).to.be.false;
     });
 
@@ -167,7 +167,7 @@ describe("IndexedDB integration", function() {
       let objectStore = context.transaction.objectStore("book");
       let best = book.chooseBestIndex(objectStore, keyRanges);
       expect(best.index).to.equal(objectStore.index("byAuthor"));
-      expect(best.range).to.equal(keyRanges.author);
+      expect(best.ranges).to.deep.equal([keyRanges.author]);
       expect(best.array).to.be.false;
     });
 
@@ -179,19 +179,43 @@ describe("IndexedDB integration", function() {
       let objectStore = context.transaction.objectStore("book");
       let best = book.chooseBestIndex(objectStore, keyRanges);
       expect(best.index).to.be.undefined;
-      expect(best.range).to.be.undefined;
     });
 
-    it("chooses composite key even if only first part relevant", function() {
+    it("chooses composite key if first part has equality and last key path has range", function() {
       let keyRanges = {
-        storeId: new Range("a", "a"),
+        storeId: new Range(1, 1),
+        isbn: new Range(100, 200),
       };
 
       let objectStore = context.transaction.objectStore("inventoryItem");
       let best = inventoryItem.chooseBestIndex(objectStore, keyRanges);
       expect(best.index).to.equal(objectStore);
-      expect(best.range).to.equal(keyRanges.storeId);
+      expect(best.ranges).to.deep.equal([keyRanges.storeId, keyRanges.isbn]);
       expect(best.array).to.be.true;
+    });
+
+    it("uses as much of composite key as possible up to first non-equality range", function() {
+      let keyRanges = {
+        storeId: new Range(1, 2),
+        isbn: new Range(100, 200),
+      };
+
+      let objectStore = context.transaction.objectStore("inventoryItem");
+      let best = inventoryItem.chooseBestIndex(objectStore, keyRanges);
+      expect(best.index).to.equal(objectStore);
+      expect(best.ranges).to.deep.equal([keyRanges.storeId]);
+      expect(best.array).to.be.true;
+    });
+
+    it("does not use composite key if range unavailable for first part", function() {
+      let keyRanges = {
+        isbn: new Range(100, 200),
+      };
+
+      let objectStore = context.transaction.objectStore("inventoryItem");
+      let best = inventoryItem.chooseBestIndex(objectStore, keyRanges);
+      expect(best.index).to.equal(objectStore.index("byISBN"));
+      expect(best.ranges).to.deep.equal([keyRanges.isbn]);
     });
 
     it("updates existing rows", function() {
@@ -462,6 +486,27 @@ describe("IndexedDB integration", function() {
           isbn: 234567,
           quantity: 2,
         },
+      ]);
+    });
+  })
+
+  it("can query using whole composite key", function() {
+    let query = select `inventoryItem`
+                 .from ({inventoryItem})
+                .where `inventoryItem.storeId == 1 && inventoryItem.isbn > 200000`
+
+    return query.then(result => {
+      expect(result).to.deep.equal([
+        {
+          storeId: 1,
+          isbn: 234567,
+          quantity: 4
+        },
+        {
+          storeId: 1,
+          isbn: 345678,
+          quantity: 5
+        }
       ]);
     });
   })

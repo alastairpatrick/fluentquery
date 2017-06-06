@@ -5,7 +5,7 @@ require("./indexeddb-fill.js");
 const { expect } = require("chai");
 const sinon = require("sinon");
 
-const { Context, Range, RangeExpression, RangeIntersection, RangeUnion, includes, nextUp } = require("..");
+const { Context, Range, RangeExpression, RangeIntersection, RangeUnion, compositeRange, includes, nextUp } = require("..");
 
 
 describe("Range", function() {
@@ -129,6 +129,26 @@ describe("Range", function() {
       expect(testFn(6)).to.be.true;
       expect(testFn(8)).to.be.false;
     })
+
+    it("is equality if lower and upper are equal and both bounds closed", function() {
+      let range = new Range(1, 1, false, false);
+      expect(range.isEquality()).to.be.true;
+    })
+
+    it("is not equality if lower and upper are different", function() {
+      let range = new Range(1, 2, false, false);
+      expect(range.isEquality()).to.be.false;
+    })
+
+    it("is not equality if lower open", function() {
+      let range = new Range(1, 1, true, false);
+      expect(range.isEquality()).to.be.false;
+    })
+
+    it("is not equality if upper open", function() {
+      let range = new Range(1, 1, false, true);
+      expect(range.isEquality()).to.be.false;
+    })
   })
 
   describe("RangeExpression", function() {
@@ -179,6 +199,29 @@ describe("Range", function() {
         }
       ]);
     });
+
+    it("is equality if lower and upper are equal and both bounds closed", function() {
+      let fn = () => 1;
+      let range = new RangeExpression(fn, fn, false, false);
+      expect(range.isEquality()).to.be.true;
+    })
+
+    it("is not equality if lower and upper are different", function() {
+      let range = new RangeExpression(() => 1, () => 2, false, false);
+      expect(range.isEquality()).to.be.false;
+    })
+
+    it("is not equality if lower open", function() {
+      let fn = () => 1;
+      let range = new RangeExpression(fn, fn, true, false);
+      expect(range.isEquality()).to.be.false;
+    })
+
+    it("is not equality if upper open", function() {
+      let fn = () => 1;
+      let range = new RangeExpression(fn, fn, false, true);
+      expect(range.isEquality()).to.be.false;
+    })
   })
 
   describe("RangeIntersection", function() {
@@ -380,6 +423,24 @@ describe("Range", function() {
         new Range([1], [2]));
       expect(range.prepare(context).map(r => r.tree())).to.deep.equal([]);
     });
+
+    it("is equality if left is equality", function() {
+      let range = new RangeIntersection(
+        new Range(1, 1), new Range(1, 2));
+      expect(range.isEquality()).to.be.true;
+    })
+
+    it("is equality if right is equality", function() {
+      let range = new RangeIntersection(
+        new Range(1, 2), new Range(2, 2));
+      expect(range.isEquality()).to.be.true;
+    })
+
+    it("is not equality if neight left nor right is equality", function() {
+      let range = new RangeIntersection(
+        new Range(1, 2), new Range(3, 4));
+      expect(range.isEquality()).to.be.false;
+    })
   })
 
 
@@ -801,5 +862,86 @@ describe("Range", function() {
         upperOpen: true,
       });
     });
+
+    it("is not used to implement Range.openUpper if its upper bound is undounded", function() {
+      expect(new Range("a", undefined, false, false).openUpper().tree()).to.deep.equal({
+        class: "Range",
+        lower: "a",
+      });
+    });
   });
 })
+
+describe("compositeRange", function() {
+  it("when passed a bounded range and no equalities, returns that range in array", function() {
+    expect(compositeRange([], new Range(1, 2)).tree()).to.deep.equal({
+      class: "Range",
+      lower: [1],
+      upper: [nextUp(2)],
+      upperOpen: true,
+    });
+  })
+
+  it("when passed a range with unbounded upper and no equalities, returns array only for lower", function() {
+    expect(compositeRange([], new Range(1, undefined)).tree()).to.deep.equal({
+      class: "Range",
+      lower: [1],
+    });
+  })
+
+  it("when passed a range with unbounded lower and no equalities, returns array without element for lower", function() {
+    expect(compositeRange([], new Range(undefined, 1)).tree()).to.deep.equal({
+      class: "Range",
+      lower: [],
+      upper: [nextUp(1)],
+      upperOpen: true,
+    });
+  })
+
+  it("when passed only equalities, concatenates their values", function() {
+    expect(compositeRange([1, 2], new Range(3, 3)).tree()).to.deep.equal({
+      class: "Range",
+      lower: [1, 2, 3],
+      upper: [1, 2, nextUp(3)],
+      upperOpen: true,
+    });
+  })
+
+  it("when passed equalities followed by closed bounded range, concatenates their values", function() {
+    expect(compositeRange([1, 2], new Range(3, 4)).tree()).to.deep.equal({
+      class: "Range",
+      lower: [1, 2, 3],
+      upper: [1, 2, nextUp(4)],
+      upperOpen: true,
+    });
+  })
+
+  it("when passed equality ranges followed by open bounded range, concatenates their values", function() {
+    expect(compositeRange([1, 2], new Range(3, 4, true, true)).tree()).to.deep.equal({
+      class: "Range",
+      lower: [1, 2, 3],
+      upper: [1, 2, 4],
+      lowerOpen: true,
+      upperOpen: true,
+    });
+  })
+
+  it("when passed equality ranges followed by range with unbounded lower, skips element for unbounded lower", function() {
+    expect(compositeRange([1, 2], new Range(undefined, 4)).tree()).to.deep.equal({
+      class: "Range",
+      lower: [1, 2],
+      upper: [1, 2, nextUp(4)],
+      upperOpen: true,
+    });
+  })
+
+  it("when passed equality ranges followed by range with unbounded upper, concatenates their values", function() {
+    expect(compositeRange([1, 2], new Range(3, undefined)).tree()).to.deep.equal({
+      class: "Range",
+      lower: [1, 2, 3],
+      upper: [1, nextUp(2)],
+      upperOpen: true,
+    });
+  })
+})
+

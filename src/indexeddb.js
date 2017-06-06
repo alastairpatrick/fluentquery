@@ -3,7 +3,7 @@
 const { Observable } = require("./rx");
 
 const { IDBKeyRange } = require("./idbbase");
-const { Range, includes } = require("./range");
+const { Range, compositeRange, includes } = require("./range");
 const { traversePath } = require("./traverse");
 const { PrimaryKey } = require("./expression");
 const { Table } = require("./tree");
@@ -53,6 +53,22 @@ const getKeyPaths = (source) => {
   } else {
     throw new Error(`Key path not supported: '${source.keyPath}'.`);
   }
+}
+
+const usableKeyRanges = (keyRanges, keyPaths) => {
+  let ranges = [];
+  for (let i = 0; i < keyPaths.length; ++i) {
+    let keyPath = keyPaths[i];
+    if (!has.call(keyRanges, keyPath)) {
+      return ranges;
+    }
+    let keyRange = keyRanges[keyPath];
+    ranges.push(keyRange);
+    if (!keyRange.isEquality()) {
+      return ranges;
+    }
+  }
+  return ranges;
 }
 
 const keyPathSetterMemo = Object.create(null);
@@ -121,45 +137,37 @@ class IDBTable extends Table {
   }
 
   chooseBestIndex(store, keyRanges) {
+    if (keyRanges === undefined)
+      return {};
+
+    // Primary key is always best.
+    let { keyPaths, array } = getKeyPaths(store);
+    let ranges = usableKeyRanges(keyRanges, keyPaths);
+    if (ranges.length)
+      return { ranges, index: store, array };
+
     let best = {};
 
-    if (keyRanges !== undefined) {
-      let { keyPaths, array } = getKeyPaths(store);
-
-      // Primary key is always best.
-      if (has.call(keyRanges, keyPaths[0])) {
-        return {
-          range: keyRanges[keyPaths[0]],
-          index: store,
-          array,
-        }
-      }
-
-      for (let i = 0; i < store.indexNames.length; ++i) {
-        let n = store.indexNames[i];
-        let index = store.index(n);
+    for (let i = 0; i < store.indexNames.length; ++i) {
+      let n = store.indexNames[i];
+      let index = store.index(n);
+      if (!index.multiEntry) {
         let { keyPaths, array } = getKeyPaths(index);
-        if (!index.multiEntry && has.call(keyRanges, keyPaths[0])) {
-          best = {
-            range: keyRanges[keyPaths[0]],
-            index,
-            array,
-          };
-        }
+        let ranges = usableKeyRanges(keyRanges, keyPaths);
+        if (ranges.length)
+          best = { ranges, index, array };
       }
+    }
 
-      // Prefer unique index
-      for (let i = 0; i < store.indexNames.length; ++i) {
-        let n = store.indexNames[i];
-        let index = store.index(n);
+    // Prefer unique index
+    for (let i = 0; i < store.indexNames.length; ++i) {
+      let n = store.indexNames[i];
+      let index = store.index(n);
+      if (!index.multiEntry && index.unique) {
         let { keyPaths, array } = getKeyPaths(index);
-        if (!index.multiEntry && index.unique && has.call(keyRanges, keyPaths[0])) {
-          best = {
-            range: keyRanges[keyPaths[0]],
-            index,
-            array,
-          };
-        }
+        let ranges = usableKeyRanges(keyRanges, keyPaths);
+        if (ranges.length)
+          best = { ranges, index, array };
       }
     }
 
@@ -170,22 +178,29 @@ class IDBTable extends Table {
     let store = context.transaction.objectStore(this.name);
     let best = this.chooseBestIndex(store, keyRanges);
 
-    if (best.range === undefined) {
+    if (best.ranges === undefined) {
       return rangeStream(store, null);
     } else {
+      console.log(`Using key ${best.index.name} with ${best.ranges.length} key paths`);
       let observable = Observable.empty();
-      let ranges = best.range.prepare(context);
-      for (let i = 0; i < ranges.length; ++i) {
-        let range = ranges[0];
+      let equals = [];
+      for (let j = 0; j < best.ranges.length - 1; ++j) {
+        let prepared = best.ranges[j].prepare(context);
+        if (prepared.length === 0)
+          return observable;
+        if (prepared.length > 1 || !prepared[0].isEquality())
+          throw new Error("Intial index ranges must all be equalities");
+        equals.push(prepared[0].lower);
+      }
+
+      let prepared = best.ranges[best.ranges.length - 1].prepare(context);
+      for (let i = 0; i < prepared.length; ++i) {
+        let range = prepared[i];
         if (best.array) {
-          range = range.openUpper();
-          range.lower = [range.lower];
-          range.upper = [range.upper];
-          console.log("toArray", range.tree());
+          range = compositeRange(equals, range);
+          console.log("comp", equals, range);
         }
-        range = idbRange(range);
-      
-        observable = observable.concat(rangeStream(best.index, range));
+        observable = observable.concat(rangeStream(best.index, idbRange(range)));
       }
 
       return observable;

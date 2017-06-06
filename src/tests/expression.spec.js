@@ -400,8 +400,47 @@ describe("TermGroups", function() {
         }        
       ]);
     })
+
+    it("identifies separate range for each dependent", function() {
+      groups.parse("a.x == 1 && b.x >= 10", schema);
+      let terms = groups.terms;
+      expect(terms.get({a}).tree().keys.a.x).to.deep.equal({
+        class: "RangeExpression",
+        lower: "1",
+        upper: "1",
+      });
+      expect(terms.get({b}).tree().keys.b.x).to.deep.equal({
+        class: "RangeExpression",
+        lower: "10",
+      });
+    })
+
+    it("identifies separate ranges within each dependent", function() {
+      groups.parse("a.x == 1 && a.y >= 10", schema);
+      let terms = groups.terms;
+      expect(terms.get({a}).tree().keys.a.x).to.deep.equal({
+        class: "RangeExpression",
+        lower: "1",
+        upper: "1",
+      });
+      expect(terms.get({a}).tree().keys.a.y).to.deep.equal({
+        class: "RangeExpression",
+        lower: "10",
+      });
+    })
+
+    it("identifies intersection of range and another expression of same dependent", function() {
+      groups.parse("a.x == 1 && a.x", schema);
+      let terms = groups.terms;
+      expect(terms.get({a}).tree().keys.a.x).to.deep.equal({
+        class: "RangeExpression",
+        lower: "1",
+        upper: "1",
+      });
+    })
   })
 })
+
 
 describe("Expression", function() {
   let a = "a", b = "b", c = "c";

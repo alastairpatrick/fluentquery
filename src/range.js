@@ -72,6 +72,11 @@ class Range {
     return true;
   }
 
+  // The conservative thing for this function to do is return false if unknown.
+  isEquality() {
+    return !this.lowerOpen && !this.upperOpen && cmp(this.lower, this.upper) === 0;
+  }
+
   cmpLower(b) {
     if (this.lower === undefined) {
       return b.lower === undefined ? 0 : -1;
@@ -124,7 +129,7 @@ class Range {
   }
 
   openUpper() {
-    if (this.upperOpen)
+    if (this.upper === undefined || this.upperOpen)
       return this;
     return new Range(this.lower, nextUp(this.upper), this.lowerOpen, true);
   }
@@ -169,6 +174,11 @@ class RangeExpression {
       this.lowerOpen,
       this.upperOpen
     ).prepare(context);
+  }
+
+  // The conservative thing for this function to do is return false if unknown.
+  isEquality() {
+    return !this.lowerOpen && !this.upperOpen && this.lowerFn === this.upperFn;
   }
 
   tree() {
@@ -225,6 +235,11 @@ class RangeUnion {
     return result;
   } 
 
+  // The conservative thing for this function to do is return false if unknown.
+  isEquality() {
+    return false;
+  }
+
   tree() {
     return {
       class: this.constructor.name,
@@ -266,6 +281,11 @@ class RangeIntersection {
     return result;
   }
 
+  // The conservative thing for this function to do is return false if unknown.
+  isEquality() {
+    return this.left.isEquality() || this.right.isEquality();
+  }
+
   tree() {
     return {
       class: this.constructor.name,
@@ -275,11 +295,38 @@ class RangeIntersection {
   }
 }
 
+const compositeRange = (equals, range) => {
+  let lower = equals, upper = equals;
+  let lowerOpen = range.lowerOpen, upperOpen = range.upperOpen;
+
+  if (range.lower !== undefined)
+    lower = lower.concat([range.lower]);
+
+  if (range.upper !== undefined) {
+    upper = upper.concat([range.upper]);
+    if (!range.upperOpen) {
+      upper[upper.length - 1] = nextUp(upper[upper.length - 1]);
+      upperOpen = true;
+    }
+  } else {
+    if (upper.length === 0) {
+      upper = undefined;
+    } else {
+      upper = upper.slice(0);
+      upper[upper.length - 1] = nextUp(upper[upper.length - 1]);
+      upperOpen = true;
+    }
+  }
+    
+  return new Range(lower, upper, lowerOpen, upperOpen);
+}
+
 module.exports = {
   Range,
   RangeExpression,
   RangeIntersection,
   RangeUnion,
+  compositeRange,
   includes,
   nextUp,
 };
