@@ -2,6 +2,7 @@
 
 const { TermGroups } = require("./expression");
 const { IDBTransaction } = require("./indexeddb");
+const { RangeIntersection } = require("./range");
 const { traverse } = require("./traverse");
 const { Join, NamedRelation, OrderBy, Relation, Table, Where } = require("./tree");
 
@@ -29,7 +30,7 @@ const hoistPredicates = (root) => {
         if (node.schema() !== undefined)
           available.merge(node.termGroups);
         else
-          node.predicates = node.predicates.concat(Array.from(node.termGroups.terms.values()).map(t => t.expression()));
+          node.predicates = node.predicates.concat(node.termGroups.terms.map(t => t.expression()));
       },
       exit(path) {
         if (path.node.schema() !== undefined)
@@ -42,7 +43,9 @@ const hoistPredicates = (root) => {
         let { node } = path;
 
         let availableSchema = getAvailableSchema(path);
-        for (let [dependencies, term] of available.terms.entries()) {
+
+        available.terms = available.terms.filter(term => {
+          let dependencies = term.dependencies;
           let satisfied = true;
           for (let n in dependencies) {
             if (has.call(dependencies, n))
@@ -53,12 +56,22 @@ const hoistPredicates = (root) => {
             node.predicates.push(term.expression());
 
             let keyRanges = term.keyRanges();
-            if (keyRanges && has.call(keyRanges, node.name))
-              Object.assign(node.keyRanges, keyRanges[node.name]);
+            if (keyRanges && has.call(keyRanges, node.name)) {
+              for (let keyPath in keyRanges[node.name]) {
+                if (has.call(keyRanges[node.name], keyPath)) {
+                  if (has.call(node.keyRanges, keyPath))
+                    node.keyRanges[keyPath] = new RangeIntersection(node.keyRanges[keyPath], keyRanges[node.name][keyPath]);
+                  else
+                    node.keyRanges[keyPath] = keyRanges[node.name][keyPath];
+                }
+              }
+            }
 
-            available.terms.delete(dependencies);
+            return false;
+          } else {
+            return true;
           }
-        };
+        });
       }
     },
 
@@ -70,9 +83,10 @@ const hoistPredicates = (root) => {
         let rSchema = node.rRelation.schema();
 
         if (node.type !== "inner") {
-          for (let [dependencies, term] of available.terms.entries()) {
+          available.terms = available.terms.filter(term => {
+            let dependencies = term.dependencies;
             if (term.keyRanges() !== undefined)
-              continue;
+              return true;
 
             let rDepends = false;
             for (let n in dependencies) {
@@ -82,9 +96,11 @@ const hoistPredicates = (root) => {
 
             if (rDepends) {
               node.predicates.push(term.expression());
-              available.terms.delete(dependencies);
+              return false;
+            } else {
+              return true;
             }
-          };
+          });
         }
 
         available.merge(path.node.termGroups);
@@ -100,7 +116,7 @@ const hoistPredicates = (root) => {
     },
   });
 
-  if (available.terms.size !== 0)
+  if (available.terms.length !== 0)
     throw new Error("Some terms were not assigned to nodes");
 
   return result;

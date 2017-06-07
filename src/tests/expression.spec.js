@@ -32,85 +32,200 @@ describe("TermGroups", function() {
   it("finds terms of one logical && expression", function() {
     groups.parse("a && b", schema);
 
-    let terms = groups.terms;
-    expect(terms.size).to.equal(2);
-    expect(terms.get({a}).tree().expression).to.equal("a");
-    expect(terms.get({b}).tree().expression).to.equal("b");
+    expect(groups.terms.map(t => t.tree())).to.deep.equal([
+      {
+        dependencies: ["a"],
+        expression: "a",
+      },
+      {
+        dependencies: ["b"],
+        expression: "b",
+      },
+    ]);
   })
 
   it("finds terms of two logical && expressions", function() {
     groups.parse("a && b && c", schema);
 
-    let terms = groups.terms;
-    expect(terms.size).to.equal(3);
-    expect(terms.get({a}).tree().expression).to.equal("a");
-    expect(terms.get({b}).tree().expression).to.equal("b");
-    expect(terms.get({c}).tree().expression).to.equal("c");
+    expect(groups.terms.map(t => t.tree())).to.deep.equal([
+      {
+        dependencies: ["a"],
+        expression: "a",
+      },
+      {
+        dependencies: ["b"],
+        expression: "b",
+      },
+      {
+        dependencies: ["c"],
+        expression: "c",
+      },
+    ]);
   })
 
   it("combines terms with the same dependencies", function() {
     groups.parse("a.x && b && a.y", schema);
 
-    let terms = groups.terms;
-    expect(terms.size).to.equal(2);
-    expect(terms.get({a}).tree().expression).to.equal("a.x && a.y");
-    expect(terms.get({b}).tree().expression).to.equal("b");
+    expect(groups.terms.map(t => t.tree())).to.deep.equal([
+      {
+        dependencies: ["a"],
+        expression: "a.x",
+      },
+      {
+        dependencies: ["b"],
+        expression: "b",
+      },
+      {
+        dependencies: ["a"],
+        expression: "a.y",
+      },
+    ]);
   })
 
   it("treats arithmetic expression as term", function() {
     groups.parse("a + b", schema);
 
-    let terms = groups.terms;
-    expect(terms.size).to.equal(1);
-    expect(terms.get({a, b}).tree().expression).to.deep.equal("a + b");
+    expect(groups.terms.map(t => t.tree())).to.deep.equal([
+      {
+        dependencies: ["a", "b"],
+        expression: "a + b",
+      },
+    ]);
   });
 
   it("treats logical || as term", function() {
     groups.parse("a || b", schema);
 
-    let terms = groups.terms;
-    expect(terms.size).to.equal(1);
-    expect(terms.get({a, b}).tree().expression).to.deep.equal("a || b");
+    expect(groups.terms.map(t => t.tree())).to.deep.equal([
+      {
+        dependencies: ["a", "b"],
+        expression: "a || b",
+      },
+    ]);
   });
 
   it("does not consider locally declared variables to be dependencies", function() {
     groups.parse("(c => c + b)(a)", schema);
 
-    let terms = groups.terms;
-    expect(terms.size).to.equal(1);
-    expect(terms.get({a, b}).tree().expression).to.deep.equal("(c => c + b)(a)");
+    expect(groups.terms.map(t => t.tree())).to.deep.equal([
+      {
+        dependencies: ["a", "b"],
+        expression: "(c => c + b)(a)",
+      },
+    ]);
   });
 
   it("transforms equality on unbound identifier to cmp()", function() {
     groups.parse("a.x == 1", schema);
 
-    let terms = groups.terms;
-    expect(terms.size).to.equal(1);
-    expect(terms.get({a}).tree().expression).to.equal("$$cmp(a.x, 1) === 0");
+    expect(groups.terms.map(t => t.tree())).to.deep.equal([
+      {
+        dependencies: ["a"],
+        expression: "$$cmp(a.x, 1) === 0",
+        keys: {
+          a: {
+            x: {
+              class: "RangeExpression",
+              lower: "1",
+              upper: "1",
+            },
+          },
+        }
+      },
+    ]);
   });
 
   it("transforms range on unbound identifier to cmp()", function() {
     groups.parse("a.x >= 1 && a.x < 2", schema);
 
-    let terms = groups.terms;
-    expect(terms.size).to.equal(1);
-    expect(terms.get({a}).tree().expression).to.equal("$$cmp(a.x, 1) >= 0 && $$cmp(a.x, 2) < 0");
+    expect(groups.terms.map(t => t.tree())).to.deep.equal([
+      {
+        dependencies: ["a"],
+        expression: "$$cmp(a.x, 1) >= 0",
+        keys: {
+          a: {
+            x: {
+              class: "RangeExpression",
+              lower: "1",
+            },
+          },
+        }
+      },
+      {
+        dependencies: ["a"],
+        expression: "$$cmp(a.x, 2) < 0",
+        keys: {
+          a: {
+            x: {
+              class: "RangeExpression",
+              upper: "2",
+              upperOpen: true,
+            },
+          },
+        }
+      },
+    ]);
   });
 
-  it("both sides of comparison may depend on tuple", function() {
+  it("both sides of comparison may depend on tuple 1", function() {
     groups.parse("a.x >= a.y", schema);
 
-    let terms = groups.terms;
-    expect(terms.size).to.equal(1);
-    expect(terms.get({a}).tree().expression).to.equal("$$cmp(a.x, a.y) >= 0");
+    expect(groups.terms.map(t => t.tree())).to.deep.equal([
+      {
+        dependencies: ["a"],
+        expression: "$$cmp(a.x, a.y) >= 0",
+        keys: {
+          a: {
+            x: {
+              class: "RangeExpression",
+              lower: "a.y",
+            },
+            y: {
+              class: "RangeExpression",
+              upper: "a.x",
+              upperOpen: true,
+            },
+          }
+        }
+      },
+    ]);
+  });
+
+  it("both sides of comparison may depend on tuple 2", function() {
+    groups.parse("a.x >= b.y", schema);
+
+    expect(groups.terms.map(t => t.tree())).to.deep.equal([
+      {
+        dependencies: ["a", "b"],
+        expression: "$$cmp(a.x, b.y) >= 0",
+        keys: {
+          a: {
+            x: {
+              class: "RangeExpression",
+              lower: "b.y",
+            },
+          },
+          b: {
+            y: {
+              class: "RangeExpression",
+              upper: "a.x",
+              upperOpen: true,
+            },
+          }
+        }
+      },
+    ]);
   });
 
   it("transforms equality on bound identifier to cmp()", function() {
     groups.parse("(v => v.x == 1)(a)", schema);
 
-    let terms = groups.terms;
-    expect(terms.size).to.equal(1);
-    expect(terms.get({a}).tree().expression).to.equal("(v => $$cmp(v.x, 1) === 0)(a)");
+    expect(groups.terms.map(t => t.tree())).to.deep.equal([
+      {
+        dependencies: ["a"],
+        expression: "(v => $$cmp(v.x, 1) === 0)(a)",
+      },
+    ]);
   });
 
   it("throws if dependency is not present in schema", function() {
@@ -128,10 +243,16 @@ describe("TermGroups", function() {
   it("compiles expression with substitution", function() {
     groups.parse(["a == ", " && b"], schema, [7]);
 
-    let terms = groups.terms;
-    expect(terms.size).to.equal(2);
-    expect(terms.get({a}).tree().expression).to.equal("$$cmp(a, $$subs[0]) === 0");
-    expect(terms.get({b}).tree().expression).to.equal("b");
+    expect(groups.terms.map(t => t.tree())).to.deep.equal([
+      {
+        dependencies: ["a"],
+        expression: "$$cmp(a, $$subs[0]) === 0",
+      },
+      {
+        dependencies: ["b"],
+        expression: "b",
+      },
+    ]);
     expect(groups.substitutions).to.deep.equal([7]);
   })
 
@@ -143,10 +264,24 @@ describe("TermGroups", function() {
     groups.merge(groups2);
     
     let terms = groups.terms;
-    expect(terms.size).to.equal(3);
-    expect(terms.get({a}).tree().expression).to.equal("a && a");
-    expect(terms.get({b}).tree().expression).to.equal("b");
-    expect(terms.get({c}).tree().expression).to.equal("c");
+    expect(groups.terms.map(t => t.tree())).to.deep.equal([
+      {
+        dependencies: ["a"],
+        expression: "a",
+      },
+      {
+        dependencies: ["b"],
+        expression: "b",
+      },
+      {
+        dependencies: ["a"],
+        expression: "a",
+      },
+      {
+        dependencies: ["c"],
+        expression: "c",
+      },
+    ]);
   })
 
   it("merges groups with substitutions", function() {
@@ -156,136 +291,172 @@ describe("TermGroups", function() {
     groups2.parse(["a + ", " < 2"], schema, [8]);
     groups.merge(groups2);
     
-    let terms = groups.terms;
-    expect(terms.size).to.equal(1);
-    expect(terms.get({a}).tree().expression).to.equal("$$cmp(a + $$subs[0], 1) > 0 && $$cmp(a + $$subs[1], 2) < 0");
+    expect(groups.terms.map(t => t.tree())).to.deep.equal([
+      {
+        dependencies: ["a"],
+        expression: "$$cmp(a + $$subs[0], 1) > 0",
+      },
+      {
+        dependencies: ["a"],
+        expression: "$$cmp(a + $$subs[1], 2) < 0",
+      },
+    ]);
     expect(groups.substitutions).to.deep.equal([7, 8]);
   })
 
   describe("ranges", function() {
     it("identifies == range", function() {
-      groups.parse("a.x == 1", schema);
-      let terms = groups.terms;
-      expect(terms.get({a}).tree().keys.a.x).to.deep.equal({
+      groups.parse("a.x == 1", schema);      
+      expect(groups.terms.map(t => t.tree().keys.a.x)).to.deep.equal([{
         class: "RangeExpression",
         lower: "1",
         upper: "1",
-      });
+      }]);
     })
 
     it("identifies >= range", function() {
       groups.parse("a.x >= 1", schema);
-      let terms = groups.terms;
-      expect(terms.get({a}).tree().keys.a.x).to.deep.equal({
+      expect(groups.terms.map(t => t.tree().keys.a.x)).to.deep.equal([{
         class: "RangeExpression",
         lower: "1",
-      });
+      }]);
     })
 
     it("identifies > range", function() {
       groups.parse("a.x > 1", schema);
-      let terms = groups.terms;
-      expect(terms.get({a}).tree().keys.a.x).to.deep.equal({
+      expect(groups.terms.map(t => t.tree().keys.a.x)).to.deep.equal([{
         class: "RangeExpression",
         lower: "1",
         lowerOpen: true,
-      });
+      }]);
     })
 
     it("identifies <= range", function() {
       groups.parse("a.x <= 1", schema);
-      let terms = groups.terms;
-      expect(terms.get({a}).tree().keys.a.x).to.deep.equal({
+      expect(groups.terms.map(t => t.tree().keys.a.x)).to.deep.equal([{
         class: "RangeExpression",
         upper: "1",
-      });
+      }]);
     })
 
     it("identifies < range", function() {
       groups.parse("a.x < 1", schema);
-      let terms = groups.terms;
-      expect(terms.get({a}).tree().keys.a.x).to.deep.equal({
+      expect(groups.terms.map(t => t.tree().keys.a.x)).to.deep.equal([{
         class: "RangeExpression",
         upper: "1",
         upperOpen: true,
-      });
+      }]);
     })
 
     it("identifies == range on two keys", function() {
       groups.parse("a.x == b.x", schema);
-      let terms = groups.terms;
-      expect(terms.get({a, b}).tree().keys.a.x).to.deep.equal({
-        class: "RangeExpression",
-        lower: "b.x",
-        upper: "b.x",
-      });
-      expect(terms.get({a, b}).tree().keys.b.x).to.deep.equal({
-        class: "RangeExpression",
-        lower: "a.x",
-        upper: "a.x",
-      });
+      expect(groups.terms.map(t => t.tree().keys)).to.deep.equal([
+        {
+          a: {
+            x: {
+              class: "RangeExpression",
+              lower: "b.x",
+              upper: "b.x",
+            },
+          },
+          b: {
+            x: {
+              class: "RangeExpression",
+              lower: "a.x",
+              upper: "a.x",
+            },
+          },
+        }
+      ]);
     })
 
     it("identifies >= range on two keys", function() {
       groups.parse("a.x >= b.x", schema);
-      let terms = groups.terms;
-      expect(terms.get({a, b}).tree().keys.a.x).to.deep.equal({
-        class: "RangeExpression",
-        lower: "b.x",
-      });
-      expect(terms.get({a, b}).tree().keys.b.x).to.deep.equal({
-        class: "RangeExpression",
-        upper: "a.x",
-        upperOpen: true,
-      });
+      expect(groups.terms.map(t => t.tree().keys)).to.deep.equal([
+        {
+          a: {
+            x: {
+              class: "RangeExpression",
+              lower: "b.x",
+            },
+          },
+          b: {
+            x: {
+              class: "RangeExpression",
+              upper: "a.x",
+              upperOpen: true,
+            },
+          },
+        }
+      ]);
     })
 
     it("identifies > range on two keys", function() {
       groups.parse("a.x > b.x", schema);
-      let terms = groups.terms;
-      expect(terms.get({a, b}).tree().keys.a.x).to.deep.equal({
-        class: "RangeExpression",
-        lower: "b.x",
-        lowerOpen: true,
-      });
-      expect(terms.get({a, b}).tree().keys.b.x).to.deep.equal({
-        class: "RangeExpression",
-        upper: "a.x",
-      });
+      expect(groups.terms.map(t => t.tree().keys)).to.deep.equal([
+        {
+          a: {
+            x: {
+              class: "RangeExpression",
+              lower: "b.x",
+              lowerOpen: true,
+            },
+          },
+          b: {
+            x: {
+              class: "RangeExpression",
+              upper: "a.x",
+            },
+          },
+        }
+      ]);
     })
 
     it("identifies <= range on two keys", function() {
       groups.parse("a.x <= b.x", schema);
-      let terms = groups.terms;
-      expect(terms.get({a, b}).tree().keys.a.x).to.deep.equal({
-        class: "RangeExpression",
-        upper: "b.x",
-      });
-      expect(terms.get({a, b}).tree().keys.b.x).to.deep.equal({
-        class: "RangeExpression",
-        lower: "a.x",
-        lowerOpen: true,
-      });
+      expect(groups.terms.map(t => t.tree().keys)).to.deep.equal([
+        {
+          a: {
+            x: {
+              class: "RangeExpression",
+              upper: "b.x",
+            },
+          },
+          b: {
+            x: {
+              class: "RangeExpression",
+              lower: "a.x",
+              lowerOpen: true,
+            },
+          },
+        }
+      ]);
     })
 
     it("identifies < range on two keys", function() {
       groups.parse("a.x < b.x", schema);
-      let terms = groups.terms;
-      expect(terms.get({a, b}).tree().keys.a.x).to.deep.equal({
-        class: "RangeExpression",
-        upper: "b.x",
-        upperOpen: true,
-      });
-      expect(terms.get({a, b}).tree().keys.b.x).to.deep.equal({
-        class: "RangeExpression",
-        lower: "a.x",
-      });
+      expect(groups.terms.map(t => t.tree().keys)).to.deep.equal([
+        {
+          a: {
+            x: {
+              class: "RangeExpression",
+              upper: "b.x",
+              upperOpen: true,
+            },
+          },
+          b: {
+            x: {
+              class: "RangeExpression",
+              lower: "a.x",
+            },
+          },
+        }
+      ]);
     })
 
     it("identifies union", function() {
       groups.parse("a.x == 1 || a.x == 2", schema);
-      let terms = groups.terms;
-      expect(terms.get({a}).tree().keys.a.x).to.deep.equal({
+      expect(groups.terms.map(t => t.tree().keys.a.x)).to.deep.equal([{
         class: "RangeUnion",
         left: {
           class: "RangeExpression",
@@ -297,29 +468,28 @@ describe("TermGroups", function() {
           lower: "2",
           upper: "2",
         },
-      });
+      }]);
     })
 
-    it("identifies intersection", function() {
+    it("does not identify top level intersection", function() {
       groups.parse("a.x >= 1 && a.x <= 2", schema);
       let terms = groups.terms;
-      expect(terms.get({a}).tree().keys.a.x).to.deep.equal({
-        class: "RangeIntersection",
-        left: {
+      expect(groups.terms.map(t => t.tree().keys.a.x)).to.deep.equal([
+        {
           class: "RangeExpression",
           lower: "1",
         },
-        right: {
+        {
           class: "RangeExpression",
           upper: "2",
         },
-      });
+      ]);
     })
 
     it("identifies complement of && expression and transforms to union", function() {
       groups.parse("!(a.x >= 1 && a.x <= 2)", schema);
       let terms = groups.terms;
-      expect(terms.get({a}).tree().keys.a.x).to.deep.equal({
+      expect(groups.terms.map(t => t.tree().keys.a.x)).to.deep.equal([{
         class: "RangeUnion",
         left: {
           class: "RangeExpression",
@@ -331,13 +501,13 @@ describe("TermGroups", function() {
           lower: "2",
           lowerOpen: true,
         },
-      });
+      }]);
     })
 
     it("identifies complement of || expression and transforms to intersection", function() {
       groups.parse("!(a.x < 1 || a.x > 2)", schema);
       let terms = groups.terms;
-      expect(terms.get({a}).tree().keys.a.x).to.deep.equal({
+      expect(groups.terms.map(t => t.tree().keys.a.x)).to.deep.equal([{
         class: "RangeIntersection",
         left: {
           class: "RangeExpression",
@@ -347,96 +517,98 @@ describe("TermGroups", function() {
           class: "RangeExpression",
           upper: "2",
         },
-      });
+      }]);
     })
 
     it("does not identify complement of equality as range", function() {
       groups.parse("!(a.x == 1)", schema);
-      let terms = groups.terms;
-      expect(terms.get({a}).tree().keys).to.be.undefined;
+      expect(groups.terms.map(t => t.tree().keys)).to.deep.equal([undefined]);
     })
 
     it("does not identify expression with non-range component as range", function() {
       groups.parse("a.x == 1 || Math.sin(a.x) < 0", schema);
-      let terms = groups.terms;
-      expect(terms.get({a}).tree().keys).to.be.undefined;
-    })
+      expect(groups.terms.map(t => t.tree().keys)).to.deep.equal([undefined]);
+      })
 
     it("does not identify expression with mixed key dependencies as range", function() {
       groups.parse("a.x == 1 || b.x == 1", schema);
-      let terms = groups.terms;
-      expect(terms.get({a, b}).tree().keys).to.be.undefined;
+      expect(groups.terms.map(t => t.tree().keys)).to.deep.equal([undefined]);
     })
 
     it("does not identify expression with mixed key paths as range", function() {
       groups.parse("a.x == 1 || a.y == 1", schema);
-      let terms = groups.terms;
-      expect(terms.get({a}).tree().keys).to.be.undefined;
+      expect(groups.terms.map(t => t.tree().keys)).to.deep.equal([undefined]);
     })
 
     it("identifies range with parameter", function() {
       groups.parse("a.x == $x", schema);
-      let terms = groups.terms;
-      expect(terms.get({a}).tree().keys.a.x).to.deep.equal({
+      expect(groups.terms.map(t => t.tree().keys.a.x)).to.deep.equal([{
         class: "RangeExpression",
         lower: "this.params.x",
         upper: "this.params.x",
-      });
-    })
-
-    it("evaluates range expression", function() {
-      groups.parse("a.x == 1 + 1", schema);
-      let terms = groups.terms;
-      expect(terms.get({a}).tree().keys.a.x).to.deep.equal({
-        class: "RangeExpression",
-        lower: "1 + 1",
-        upper: "1 + 1",
-      });
-      expect(terms.get({a}).keyRanges().a.x.prepare(context).map(r => r.tree())).to.deep.equal([
-        {
-          class: "Range",
-          lower: 2,
-          upper: 2,
-        }        
-      ]);
+      }]);
     })
 
     it("identifies separate range for each dependent", function() {
       groups.parse("a.x == 1 && b.x >= 10", schema);
-      let terms = groups.terms;
-      expect(terms.get({a}).tree().keys.a.x).to.deep.equal({
-        class: "RangeExpression",
-        lower: "1",
-        upper: "1",
-      });
-      expect(terms.get({b}).tree().keys.b.x).to.deep.equal({
-        class: "RangeExpression",
-        lower: "10",
-      });
+      expect(groups.terms.map(t => t.tree().keys)).to.deep.equal([
+        {
+          a: {
+            x: {
+              class: "RangeExpression",
+              lower: "1",
+              upper: "1",
+            },
+          },
+        },
+        {
+          b: {
+            x: {
+              class: "RangeExpression",
+              lower: "10",
+            },
+          },
+        }
+      ]);
     })
 
     it("identifies separate ranges within each dependent", function() {
       groups.parse("a.x == 1 && a.y >= 10", schema);
-      let terms = groups.terms;
-      expect(terms.get({a}).tree().keys.a.x).to.deep.equal({
-        class: "RangeExpression",
-        lower: "1",
-        upper: "1",
-      });
-      expect(terms.get({a}).tree().keys.a.y).to.deep.equal({
-        class: "RangeExpression",
-        lower: "10",
-      });
+      expect(groups.terms.map(t => t.tree().keys)).to.deep.equal([
+        {
+          a: {
+            x: {
+              class: "RangeExpression",
+              lower: "1",
+              upper: "1",
+            },
+          }
+        },
+        {
+          a: {
+            y: {
+              class: "RangeExpression",
+              lower: "10",
+            },
+          },
+        }
+      ]);
     })
 
     it("identifies intersection of range and another expression of same dependent", function() {
       groups.parse("a.x == 1 && a.x", schema);
-      let terms = groups.terms;
-      expect(terms.get({a}).tree().keys.a.x).to.deep.equal({
-        class: "RangeExpression",
-        lower: "1",
-        upper: "1",
-      });
+      expect(groups.terms.map(t => t.tree().keys)).to.deep.equal([
+        {
+          a: {
+            x: {
+              class: "RangeExpression",
+              lower: "1",
+              upper: "1",
+            },
+          }
+        },
+        undefined
+      ]);
     })
   })
 })
@@ -461,30 +633,26 @@ describe("Expression", function() {
 
   it("tree() evaluates to source", function() {
     groups.parse("a + b", schema);
-    let terms = groups.terms;
-    expect(terms.get({a, b}).expression().tree()).to.equal("a + b");
+    expect(groups.terms[0].expression().tree()).to.equal("a + b");
   })
 
   it("can evaluate expression", function() {
     groups.parse("a + b", schema);
-    let terms = groups.terms;
-    let expression = terms.get({a, b}).expression();
+    let expression = groups.terms[0].expression();
     let prepared = expression.prepare(context);
     expect(prepared({ a: 1, b: 2 })).to.equal(3);
   })
 
   it("can customize expression global scope", function() {
     groups.parse("custom", schema);
-    let terms = groups.terms;
-    let expression = terms.get({}).expression();
+    let expression = groups.terms[0].expression();
     let prepared = expression.prepare(context);
     expect(prepared()).to.equal("custom value");
   })
 
   it("can partially evaluate expression", function() {
     groups.parse("a + b", schema);
-    let terms = groups.terms;
-    let expression = terms.get({a, b}).expression();
+    let expression = groups.terms[0].expression();
     let partial = expression.partial({ a: 1 });
     expect(partial.dependencies).to.deep.equal({b});
     let prepared = partial.prepare(context);
@@ -493,8 +661,7 @@ describe("Expression", function() {
 
   it("evaluates with substitution", function() {
     groups.parse(["a + ", " + 1"], schema, [2]);
-    let terms = groups.terms;
-    let expression = terms.get({a}).expression();
+    let expression = groups.terms[0].expression();
     let prepared = expression.prepare(context);
     expect(prepared({ a: 1 })).to.equal(4);
   })

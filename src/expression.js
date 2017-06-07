@@ -34,15 +34,6 @@ const expressionScope = {
 expressionScope.global = expressionScope;
 Object.assign(expressionScope, stdAggregates);
 
-class DependencyMap extends ValueMap {
-  isEqual(a, b) {
-    return isEqualWith(a, b, (a, b) => {
-      if (a && typeof a === "object" && typeof a.isSameDependency === "function")
-        return a.isSameDependency(b);
-    });
-  }
-}
-
 const unknownDependency = {
   isSameDependency(that) {
     return false;
@@ -137,6 +128,9 @@ const extractKeyPath = (node) => {
       keyPath = node.property.name;
     node = node.object;
   }
+
+  if (keyPath === undefined)
+    return undefined;
 
   if (!types.isIdentifier(node))
     return undefined;
@@ -370,7 +364,7 @@ const groupExpression = (groupIdx) => {
 
 class TermGroups {
   constructor() {
-    this.terms = new DependencyMap();
+    this.terms = [];
     this.substitutions = [];
     this.substitutionNodes = [];
   }
@@ -381,16 +375,7 @@ class TermGroups {
     });
     this.substitutions = this.substitutions.concat(other.substitutions);
     this.substitutionNodes = this.substitutionNodes.concat(other.substitutionNodes);
-
-    for (let [dependencies, otherTerm] of other.terms.entries()) {
-      let thisTerm = this.terms.get(dependencies);
-      if (thisTerm === undefined) {
-        this.terms.set(dependencies, otherTerm);
-      } else {
-        thisTerm.merge(otherTerm);
-      }
-    }
-
+    this.terms = this.terms.concat(other.terms);
     other.terms = other.substitutions = other.substitutionNodes = undefined;
   }
 
@@ -515,12 +500,7 @@ class TermGroups {
         exit(path) {
           let { node } = path;
           if (node === termNode) {
-            let newTerm = new Term(termNode, termDependencies, this.substitutions);
-            let term = this.terms.get(termDependencies);
-            if (term === undefined)
-              this.terms.set(termDependencies, newTerm);
-            else
-              term.merge(newTerm);
+            this.terms.push(new Term(termNode, termDependencies, this.substitutions));
             termNode = undefined;
           }
         }
@@ -539,18 +519,7 @@ class TermGroups {
   }
 
   tree() {
-    let result = [];
-    for (let term of this.terms.values()) {
-      result.push(term.tree());
-    }
-    return result.sort((a, b) => {
-      if (a.expression < b.expression)
-        return -1;
-      else if (a.expression > b.expression)
-        return 1;
-      else
-        return 0;
-    });
+    return this.terms.map(t => t.tree());
   }
 }
 

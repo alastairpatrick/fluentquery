@@ -307,11 +307,11 @@ describe("fluentquery query builder", function() {
         lRelation: "thing",
         rRelation: "type",
         termGroups: [{
-          dependencies: ["thing"],
-          expression: "thing.id !== 7",
-        }, {
           dependencies: ["thing", "type"],
           expression: "thing.type_id === type.id",
+        }, {
+          dependencies: ["thing"],
+          expression: "thing.id !== 7",
         }],
       },
     });
@@ -349,7 +349,10 @@ describe("fluentquery query builder", function() {
         relation: "thing",
         termGroups: [{
           dependencies: ["thing"],
-          expression: "thing.id !== this.params.id1 && thing.id !== this.params.id2",
+          expression: "thing.id !== this.params.id1",
+        }, {
+          dependencies: ["thing"],
+          expression: "thing.id !== this.params.id2",
         }],
       },
     });
