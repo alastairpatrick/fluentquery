@@ -6,7 +6,7 @@ const { IDBKeyRange } = require("./idbbase");
 const { Range, compositeRange, includes } = require("./range");
 const { traversePath } = require("./traverse");
 const { PrimaryKey } = require("./expression");
-const { Table } = require("./tree");
+const { ObjectStore } = require("./tree");
 
 const has = Object.prototype.hasOwnProperty;
 let identity = x => x;
@@ -123,14 +123,14 @@ const keyPathGetter = (source) => {
   return getter;
 }
 
-class IDBTable extends Table {
+class PersistentObjectStore extends ObjectStore {
   constructor(db, name) {
     super();
 
     if (typeof db !== "object")
       throw new Error("Expected IDBDatabase");
     if (typeof name !== "string")
-      throw new Error("Expected table name");
+      throw new Error("Expected object store name");
 
     this.db = db;
     this.name = name;
@@ -321,25 +321,25 @@ class IDBTable extends Table {
   }
 }
 
-class IDBTransaction {
-  constructor(relation, db, tableNames, mode) {
+class Transaction {
+  constructor(relation, db, objectStoreNames, mode) {
     this.relation = relation;
     this.db = db;
-    this.tableNames = tableNames;
+    this.objectStoreNames = objectStoreNames;
     this.mode = mode;
   }
 
   execute(context) {
     context.db = this.db;
     if (context.transaction === undefined)
-      context.transaction = this.db.transaction(Array.from(this.tableNames), this.mode);
+      context.transaction = this.db.transaction(Array.from(this.objectStoreNames), this.mode);
     return context.execute(this.relation);
   }
 
   tree() {
     return {
       class: this.constructor.name,
-      tableNames: Array.from(this.tableNames).sort(),
+      objectStoreNames: Array.from(this.objectStoreNames).sort(),
       relation: this.relation.tree(),
       mode: this.mode,
     };
@@ -347,6 +347,6 @@ class IDBTransaction {
 }
 
 module.exports = {
-  IDBTable,
-  IDBTransaction,
+  PersistentObjectStore,
+  Transaction,
 };

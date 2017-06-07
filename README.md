@@ -12,7 +12,7 @@ Features:
 * Group by with aggregates such as sum, count, min, max, etc
 * Query planner uses static analysis of JavaScript to determine which indexes to use
 * Insert, update and upsert rows in IndexedDB object stores
-* Also works on [fakeIndexedDB](https://github.com/dumbmatter/fakeIndexedDB
+* Also works on [fakeIndexedDB](https://github.com/dumbmatter/fakeIndexedDB)
 
 It's still a work in progress but everything in the feature list is working to a degree.
 

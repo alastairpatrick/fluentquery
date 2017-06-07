@@ -1,10 +1,10 @@
 "use strict";
 
 const { TermGroups } = require("./expression");
-const { IDBTransaction } = require("./indexeddb");
+const { Transaction } = require("./indexeddb");
 const { RangeIntersection } = require("./range");
 const { traverse } = require("./traverse");
-const { Join, NamedRelation, OrderBy, Relation, Table, Where } = require("./tree");
+const { Join, NamedRelation, OrderBy, Relation, ObjectStore, Where } = require("./tree");
 
 const has = Object.prototype.hasOwnProperty;
 
@@ -135,7 +135,7 @@ const hoistPredicates = (root) => {
 
 const prepareTransaction = (root) => {
   let db;
-  let tableNames = new Set();
+  let objectStoreNames = new Set();
   let mode = "readonly";
 
   root = traverse(root, {
@@ -143,19 +143,19 @@ const prepareTransaction = (root) => {
       mode = "readwrite";
     },
 
-    IDBTable(path) {
+    PersistentObjectStore(path) {
       if (path.node.db !== db) {
         if (db) 
           throw new Error("Query accesses more than one database.");
         db = path.node.db;
       }
 
-      tableNames.add(path.node.name);
+      objectStoreNames.add(path.node.name);
     }
   });
 
   if (db !== undefined)
-    root = new IDBTransaction(root, db, tableNames, mode);
+    root = new Transaction(root, db, objectStoreNames, mode);
 
   return root;
 }

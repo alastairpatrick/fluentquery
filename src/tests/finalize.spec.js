@@ -6,14 +6,14 @@ const { expect } = require("chai");
 const sinon = require("sinon");
 
 const {
-  ArrayTable,
+  ArrayObjectStore,
   CompositeUnion,
   Expression,
   GroupBy,
-  IDBTable,
   Join,
   NamedRelation,
   OrderBy,
+  PersistentObjectStore,
   Write,
   Select,
   TermGroups,
@@ -35,9 +35,9 @@ describe("Optimize", function() {
 
   beforeEach(function() {
     let data = [1, 2];
-    arrayS = new ArrayTable(data);
+    arrayS = new ArrayObjectStore(data);
     namedS = new NamedRelation(arrayS, "s");
-    arrayT = new ArrayTable(data);
+    arrayT = new ArrayObjectStore(data);
     namedT = new NamedRelation(arrayT, "t");
   })
 
@@ -262,15 +262,15 @@ describe("Optimize", function() {
   })
 
   describe("Analyze transaction", function() {
-    it("adds transaction node for table names of IDBTable nodes", function() {
+    it("adds transaction node for object store names of PersistentObjectStore nodes", function() {
       let db = {};
-      let table = new IDBTable(db, "employee");
-      let named = new NamedRelation(table, "e");
+      let objectStore = new PersistentObjectStore(db, "employee");
+      let named = new NamedRelation(objectStore, "e");
 
       let analyzed = prepareTransaction(named);
       expect(analyzed.tree()).to.deep.equal({
-        class: "IDBTransaction",
-        tableNames: ["employee"],
+        class: "Transaction",
+        objectStoreNames: ["employee"],
         relation: "e",
         mode: "readonly",
       });
@@ -278,41 +278,41 @@ describe("Optimize", function() {
 
     it("adds readwrite transaction node if there are any Write nodes", function() {
       let db = {};
-      let table = new IDBTable(db, "employee");
-      let named = new NamedRelation(table, "e");
-      let write = new Write(named, table, {});
+      let objectStore = new PersistentObjectStore(db, "employee");
+      let named = new NamedRelation(objectStore, "e");
+      let write = new Write(named, objectStore, {});
 
       let analyzed = prepareTransaction(write);
       expect(analyzed.tree()).to.deep.equal({
-        class: "IDBTransaction",
+        class: "Transaction",
         relation: {
           class: "Write",
           options: {},
           relation: "e",
-          table: {
-            "class": "IDBTable",
+          objectStore: {
+            "class": "PersistentObjectStore",
           },
         },
-        tableNames: ["employee"],
+        objectStoreNames: ["employee"],
         mode: "readwrite",
       });
     })
 
-    it("does not add transaction node if no IDBTable nodes", function() {
-      let table = new ArrayTable([]);
-      let named = new NamedRelation(table, "e");
+    it("does not add transaction node if no PersistentObjectStore nodes", function() {
+      let objectStore = new ArrayObjectStore([]);
+      let named = new NamedRelation(objectStore, "e");
 
       let analyzed = prepareTransaction(named);
       expect(analyzed.tree()).to.deep.equal("e");
     })
 
-    it("throws if IDBTables from multiple databases accessed", function() {
+    it("throws if PersistentObjectStores from multiple databases accessed", function() {
       let db1 = {};
-      let table1 = new IDBTable(db1, "employee");
-      let named1 = new NamedRelation(table1, "e");
+      let objectStore1 = new PersistentObjectStore(db1, "employee");
+      let named1 = new NamedRelation(objectStore1, "e");
       let db2 = {};
-      let table2 = new IDBTable(db2, "invoice");
-      let named2 = new NamedRelation(table2, "i");
+      let objectStore2 = new PersistentObjectStore(db2, "invoice");
+      let named2 = new NamedRelation(objectStore2, "i");
       let join = new Join(named1, named2);
 
       expect(function() {

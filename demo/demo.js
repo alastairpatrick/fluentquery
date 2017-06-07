@@ -1,4 +1,4 @@
-const { insert, select, update, upsert, IDBTable } = require("../src");
+const { insert, select, update, upsert, PersistentObjectStore } = require("../src");
 
 const createDatabase = () => {
   return new Promise((resolve, reject) => {
@@ -48,9 +48,9 @@ createDatabase().then(db_ => {
   window.insert = insert;
   window.update = update;
   window.upsert = upsert;
-  window.book = new IDBTable(db, "book");
-  window.inventoryItem = new IDBTable(db, "inventoryItem");
-  window.store = new IDBTable(db, "store");
+  window.book = new PersistentObjectStore(db, "book");
+  window.inventoryItem = new PersistentObjectStore(db, "inventoryItem");
+  window.store = new PersistentObjectStore(db, "store");
   
   console.log("Database ready");
 });

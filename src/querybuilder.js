@@ -5,10 +5,10 @@ const { finalize } = require("./finalize");
 const { traverse } = require("./traverse");
 
 const {
-  ArrayTable,
+  ArrayObjectStore,
   CompositeUnion,
   Context,
-  FunctionTable,
+  FunctionObjectStore,
   GroupBy,
   Join,
   Memoize,
@@ -48,12 +48,12 @@ const makeInnerJoin = (relationMap) => {
       if (relation instanceof Relation) {
         // fin
       } else if (Array.isArray(relation)) {
-        relation = new ArrayTable(relation);
+        relation = new ArrayObjectStore(relation);
       } else if (typeof relation === "function") {
         if (relation[QUERY])
           relation = relation.relation();
         else
-          relation = new FunctionTable(relation);
+          relation = new FunctionObjectStore(relation);
       } else {
         throw new Error(`Bad relation type for "${n}".`);
       }
@@ -133,7 +133,7 @@ const newQuery = (command) => {
           queryRelation = new Memoize(queryRelation);
       } else {
         if (into === undefined)
-          throw new Error("Use into() to specify table to be updated.");
+          throw new Error("Use into() to specify object store to be updated.");
 
         queryRelation = new Write(queryRelation, into, {
           overwrite: command === "update" || command === "upsert",
@@ -175,13 +175,13 @@ const newQuery = (command) => {
       return chain(makeInnerJoin(relationMap));
     },
 
-    into(table) {
+    into(objectStore) {
       if (into !== undefined)
         throw new Error("into() already called");
-      into = table;
+      into = objectStore;
 
       if (command === "update" || command === "delete")
-        buildRelation = makeInnerJoin({"$$this": table});
+        buildRelation = makeInnerJoin({"$$this": objectStore});
 
       return chain(buildRelation);
     },
@@ -348,8 +348,8 @@ const update = (selector, ...args) => {
   return newQuery("update").select(selector, ...args);;
 };
 
-const deleteFrom = (table) => {
-  return newQuery("delete").select("this").into(table);
+const deleteFrom = (objectStore) => {
+  return newQuery("delete").select("this").into(objectStore);
 }
 
 module.exports = {

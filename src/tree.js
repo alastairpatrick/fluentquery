@@ -52,13 +52,13 @@ class Relation {
   }
 }
 
-class Table extends Relation {
+class ObjectStore extends Relation {
   constructor() {
     super();
   }
 }
 
-class ArrayTable extends Table {
+class ArrayObjectStore extends ObjectStore {
   constructor(array) {
     super();
     this.array = array;
@@ -81,7 +81,7 @@ class ArrayTable extends Table {
   }
 };
 
-class FunctionTable extends Table {
+class FunctionObjectStore extends ObjectStore {
   constructor(fn) {
     super();
     this.fn = fn;
@@ -132,10 +132,10 @@ class Select extends Relation {
 }
 
 class Write extends Relation {
-  constructor(relation, table, options) {
+  constructor(relation, objectStore, options) {
     super();
     this.relation = relation;
-    this.table = table;
+    this.objectStore = objectStore;
     this.options = options;
   }
 
@@ -144,9 +144,9 @@ class Write extends Relation {
     
     let method;
     if (this.options.delete) {
-      method = this.table.delete.bind(this.table);
+      method = this.objectStore.delete.bind(this.objectStore);
     } else {
-      method = this.table.put.bind(this.table);
+      method = this.objectStore.put.bind(this.objectStore);
     }
 
     // All the tuples are collected in an array before applying any modifications
@@ -158,14 +158,14 @@ class Write extends Relation {
 
   accept(context) {
     traversePath(this, "relation", context);
-    traversePath(this, "table", context);
+    traversePath(this, "objectStore", context);
   }
 
   tree() {
     let result = {
       class: this.constructor.name,
       relation: this.relation.tree(),
-      table: this.table.tree(),
+      objectStore: this.objectStore.tree(),
       options: this.options,
     }
     
@@ -197,7 +197,7 @@ class NamedRelation extends Relation {
   }
 
   tree() {
-    if (this.relation instanceof Table) {
+    if (this.relation instanceof ObjectStore) {
       return this.name;
     } else {
       let result = {
@@ -546,11 +546,11 @@ class Memoize extends Relation {
 }
 
 module.exports = {
-  ArrayTable,
+  ArrayObjectStore,
   Relation,
   CompositeUnion,
   Context,
-  FunctionTable,
+  FunctionObjectStore,
   GroupBy,
   Join,
   Memoize,
@@ -558,7 +558,7 @@ module.exports = {
   OrderBy,
   Select,
   SetOperation,
-  Table,
+  ObjectStore,
   Where,
   Write,
 };

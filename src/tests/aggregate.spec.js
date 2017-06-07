@@ -12,12 +12,12 @@ const {
 let sandbox = sinon.sandbox.create();
 
 describe("Aggregate", function() {
-  let table;
+  let store;
 
   beforeEach(function() {
-    table = [];
+    store = [];
     for (let i = 0; i < 100; ++i) {
-      table.push({
+      store.push({
         quartile: (i / 25) | 0,
         i: i === 0 ? undefined : i,
       });
@@ -29,11 +29,11 @@ describe("Aggregate", function() {
   })
 
   it("calculates avg()", function() {
-    let query = select `{ quartile: table.quartile
-                        , average: avg(table.i)
+    let query = select `{ quartile: store.quartile
+                        , average: avg(store.i)
                         }`
-                 .from ({table})
-              .groupBy `table.quartile`;
+                 .from ({store})
+              .groupBy `store.quartile`;
 
     return query.then(result => {
       expect(result).to.deep.equal([
@@ -58,11 +58,11 @@ describe("Aggregate", function() {
   })
 
   it("calculates count()", function() {
-    let query = select `{ quartile: table.quartile
-                        , num: count(table.i)
+    let query = select `{ quartile: store.quartile
+                        , num: count(store.i)
                         }`
-                 .from ({table})
-              .groupBy `table.quartile`;
+                 .from ({store})
+              .groupBy `store.quartile`;
 
     return query.then(result => {
       expect(result).to.deep.equal([
@@ -87,11 +87,11 @@ describe("Aggregate", function() {
   })
 
   it("calculates max()", function() {
-    let query = select `{ quartile: table.quartile
-                        , max: max(table.i)
+    let query = select `{ quartile: store.quartile
+                        , max: max(store.i)
                         }`
-                 .from ({table})
-              .groupBy `table.quartile`;
+                 .from ({store})
+              .groupBy `store.quartile`;
 
     return query.then(result => {
       expect(result).to.deep.equal([
@@ -116,11 +116,11 @@ describe("Aggregate", function() {
   })
 
   it("calculates min()", function() {
-    let query = select `{ quartile: table.quartile
-                        , min: min(table.i)
+    let query = select `{ quartile: store.quartile
+                        , min: min(store.i)
                         }`
-                 .from ({table})
-              .groupBy `table.quartile`;
+                 .from ({store})
+              .groupBy `store.quartile`;
 
     return query.then(result => {
       expect(result).to.deep.equal([
@@ -145,11 +145,11 @@ describe("Aggregate", function() {
   })
 
   it("calculates sum()", function() {
-    let query = select `{ quartile: table.quartile
-                        , total: sum(table.i)
+    let query = select `{ quartile: store.quartile
+                        , total: sum(store.i)
                         }`
-                 .from ({table})
-              .groupBy `table.quartile`;
+                 .from ({store})
+              .groupBy `store.quartile`;
 
     return query.then(result => {
       expect(result).to.deep.equal([

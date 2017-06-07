@@ -9,7 +9,7 @@ const sortBy = require("lodash/sortBy");
 
 const {
   Aggregate,
-  ArrayTable,
+  ArrayObjectStore,
   Context,
   Expression,
   GroupBy,
@@ -48,14 +48,14 @@ describe("Tree", function() {
       {id: 2, name: "Banana", calories: 105, type_id: 1},
       {id: 3, name: "Cake", calories: 235, type_id: 2},
     ];
-    thingStore = new ArrayTable(thing);
+    thingStore = new ArrayObjectStore(thing);
     thingRelation = new NamedRelation(thingStore, "thing");
 
     type = [
       {id: 1, name: "Vegetable"},
       {id: 2, name: "Mineral"},
     ];
-    typeStore = new ArrayTable(type);
+    typeStore = new ArrayObjectStore(type);
     typeRelation = new NamedRelation(typeStore, "type");
     context = new Context({ p1: 1, p2: 2 });
     visitor = {};
@@ -65,14 +65,14 @@ describe("Tree", function() {
     sandbox.restore();
   })
 
-  describe("ArrayTable", function() {
+  describe("ArrayObjectStore", function() {
     it("accepts", function() {
-      visitor.ArrayTable = sandbox.stub();
+      visitor.ArrayObjectStore = sandbox.stub();
       traverse(typeStore, visitor);
-      sinon.assert.calledOnce(visitor.ArrayTable);
+      sinon.assert.calledOnce(visitor.ArrayObjectStore);
     })
 
-    it("executes ArrayTable", function() {
+    it("executes ArrayObjectStore", function() {
       return resultArray(typeStore.execute()).then(result => {
         expect(result).to.deep.equal(type);
       });
@@ -128,11 +128,11 @@ describe("Tree", function() {
 
   describe("NamedRelation", function() {
     it("accepts", function() {
-      visitor.ArrayTable = sandbox.stub();
+      visitor.ArrayObjectStore = sandbox.stub();
       visitor.NamedRelation = sandbox.stub();
       traverse(typeRelation, visitor);
       sinon.assert.calledOnce(visitor.NamedRelation);
-      sinon.assert.calledOnce(visitor.ArrayTable);
+      sinon.assert.calledOnce(visitor.ArrayObjectStore);
     });
 
     it("schema", function() {

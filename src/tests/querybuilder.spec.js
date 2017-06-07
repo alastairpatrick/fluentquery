@@ -5,7 +5,7 @@ require("./indexeddb-fill.js");
 const { expect } = require("chai");
 const sinon = require("sinon");
 
-const { ArrayTable, NamedRelation } = require("..");
+const { ArrayObjectStore, NamedRelation } = require("..");
 const { deleteFrom, insert, select, update, upsert } = require("../querybuilder");
 
 let sandbox = sinon.sandbox.create();
@@ -22,14 +22,14 @@ describe("fluentquery query builder", function() {
       {id: 2, name: "Banana", calories: 105, type_id: 1},
       {id: 3, name: "Cake", calories: 235, type_id: 2},
     ];
-    thingStore = new ArrayTable(thing);
+    thingStore = new ArrayObjectStore(thing);
     thingRelation = new NamedRelation(thingStore, "thing");
 
     type = [
       {id: 1, name: "Vegetable"},
       {id: 2, name: "Mineral"},
     ];
-    typeStore = new ArrayTable(type);
+    typeStore = new ArrayObjectStore(type);
     typeRelation = new NamedRelation(typeStore, "type");
   })
 
@@ -495,8 +495,8 @@ describe("fluentquery query builder", function() {
         selector: "value",
         relation: "value",
       },
-      table: {
-        class: "ArrayTable",
+      objectStore: {
+        class: "ArrayObjectStore",
       },
       options: {
         overwrite: false,
@@ -517,8 +517,8 @@ describe("fluentquery query builder", function() {
         selector: "{ id: thing.id, name: thing.name.toLowerCase() }",
         relation: "thing",
       },
-      table: {
-        class: "ArrayTable",
+      objectStore: {
+        class: "ArrayObjectStore",
       },
       options: {
         overwrite: true,
@@ -538,8 +538,8 @@ describe("fluentquery query builder", function() {
         selector: "Object.assign({}, $$this, { name: $$this.name.toLowerCase() })",
         relation: "$$this",
       },
-      table: {
-        class: "ArrayTable",
+      objectStore: {
+        class: "ArrayObjectStore",
       },
       options: {
         overwrite: true,
@@ -558,8 +558,8 @@ describe("fluentquery query builder", function() {
         selector: "$$this",
         relation: "$$this",
       },
-      table: {
-        class: "ArrayTable",
+      objectStore: {
+        class: "ArrayObjectStore",
       },
       options: {
         overwrite: false,
@@ -634,13 +634,13 @@ describe("fluentquery query builder", function() {
 
   it("runs cached sub-queries only once per execution context", function() {
     let count = 0;
-    let tableGetter = () => {
+    let storeGetter = () => {
       ++count;
       return type;
     }
 
     let subquery = select `type`
-                    .from ({type: tableGetter})
+                    .from ({type: storeGetter})
                  .memoize;
 
     let query = select `{id1: type1.id, id2: type2.id}`

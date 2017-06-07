@@ -11,8 +11,8 @@ const IDBKeyRange = require("fake-indexeddb/lib/FDBKeyRange");
 
 const {
   Context,
-  IDBTable,
-  IDBTransaction,
+  Transaction,
+  PersistentObjectStore,
   PrimaryKey,
   Range,
   deleteFrom,
@@ -82,9 +82,9 @@ describe("IndexedDB integration", function() {
     context = new Context({});  
     return createDatabase().then(db_ => {
       db = db_;
-      book = new IDBTable(db, "book");
-      inventoryItem = new IDBTable(db, "inventoryItem");
-      store = new IDBTable(db, "store");
+      book = new PersistentObjectStore(db, "book");
+      inventoryItem = new PersistentObjectStore(db, "inventoryItem");
+      store = new PersistentObjectStore(db, "store");
     });
   })
 
@@ -93,7 +93,7 @@ describe("IndexedDB integration", function() {
     db = undefined;
    })
 
-  describe("IDBTable", function() {
+  describe("PersistentObjectStore", function() {
     beforeEach(function() {
       context.transaction = db.transaction(["book", "inventoryItem", "store"], "readwrite");
     })
@@ -296,7 +296,7 @@ describe("IndexedDB integration", function() {
       });
     })
 
-    it("updates existing row of table with composite key", function() {
+    it("updates existing row of store with composite key", function() {
       let observable = inventoryItem.put(context, [
         {storeId: 1, isbn: 234567, quantity: 44},
       ]);
@@ -338,7 +338,7 @@ describe("IndexedDB integration", function() {
       });
     })
 
-    it("deletes row of table with composite key", function() {
+    it("deletes row of store with composite key", function() {
       let observable = inventoryItem.delete(context, [
         {storeId: 1, isbn: 234567, quantity: 4},
       ]);
@@ -361,8 +361,8 @@ describe("IndexedDB integration", function() {
     })
   })
 
-  it("wraps transaction with IDBTransaction", function() {
-    let transaction = new IDBTransaction(book, db, new Set(["book"], "readonly"));
+  it("wraps transaction with Transaction", function() {
+    let transaction = new Transaction(book, db, new Set(["book"], "readonly"));
     let observable = transaction.execute(context);
     return resultArray(observable).then(results => {
       expect(results).to.deep.equal([
