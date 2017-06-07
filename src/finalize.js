@@ -27,10 +27,14 @@ const hoistPredicates = (root) => {
     Where: {
       enter(path) {
         let { node } = path;
-        if (node.schema() !== undefined)
+        if (node.schema() !== undefined) {
           available.merge(node.termGroups);
-        else
-          node.predicates = node.predicates.concat(node.termGroups.terms.map(t => t.expression()));
+        } else {
+          if (node.termGroups.terms.length) {
+            let mergedTerm = node.termGroups.terms.reduce((merged, term) => merged.merge(term));
+            node.predicates.push(mergedTerm.expression());
+          }
+        }
       },
       exit(path) {
         if (path.node.schema() !== undefined)
@@ -44,6 +48,7 @@ const hoistPredicates = (root) => {
 
         let availableSchema = getAvailableSchema(path);
 
+        let terms = [];
         available.terms = available.terms.filter(term => {
           let dependencies = term.dependencies;
           let satisfied = true;
@@ -52,26 +57,28 @@ const hoistPredicates = (root) => {
               satisfied = satisfied && (dependencies[n].isSameDependency(availableSchema[n]));
           }
 
-          if (satisfied) {
-            node.predicates.push(term.expression());
+          if (satisfied)
+            terms.push(term);
 
-            let keyRanges = term.keyRanges();
-            if (keyRanges && has.call(keyRanges, node.name)) {
-              for (let keyPath in keyRanges[node.name]) {
-                if (has.call(keyRanges[node.name], keyPath)) {
-                  if (has.call(node.keyRanges, keyPath))
-                    node.keyRanges[keyPath] = new RangeIntersection(node.keyRanges[keyPath], keyRanges[node.name][keyPath]);
-                  else
-                    node.keyRanges[keyPath] = keyRanges[node.name][keyPath];
-                }
+          return !satisfied;
+        });
+
+        if (terms.length) {
+          let mergedTerm = terms.reduce((merged, term) => merged.merge(term))
+          node.predicates.push(mergedTerm.expression());
+
+          let keyRanges = mergedTerm.keyRanges();
+          if (keyRanges && has.call(keyRanges, node.name)) {
+            for (let keyPath in keyRanges[node.name]) {
+              if (has.call(keyRanges[node.name], keyPath)) {
+                if (has.call(node.keyRanges, keyPath))
+                  node.keyRanges[keyPath] = new RangeIntersection(node.keyRanges[keyPath], keyRanges[node.name][keyPath]);
+                else
+                  node.keyRanges[keyPath] = keyRanges[node.name][keyPath];
               }
             }
-
-            return false;
-          } else {
-            return true;
           }
-        });
+        }
       }
     },
 
@@ -83,6 +90,7 @@ const hoistPredicates = (root) => {
         let rSchema = node.rRelation.schema();
 
         if (node.type !== "inner") {
+          let terms = [];
           available.terms = available.terms.filter(term => {
             let dependencies = term.dependencies;
             if (term.keyRanges() !== undefined)
@@ -94,14 +102,17 @@ const hoistPredicates = (root) => {
                 rDepends = rDepends || dependencies[n].isSameDependency(rSchema[n]);
             }
 
-            if (rDepends) {
-              node.predicates.push(term.expression());
-              return false;
-            } else {
-              return true;
-            }
+            if (rDepends)
+              terms.push(term);
+            return !rDepends;
           });
+
+          if (terms.length) {
+            let mergedTerm = terms.reduce((merged, term) => merged.merge(term))
+            node.predicates.push(mergedTerm.expression());
+          }
         }
+
 
         available.merge(path.node.termGroups);
       }

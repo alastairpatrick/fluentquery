@@ -314,6 +314,7 @@ class Term {
     this.node = types.logicalExpression("&&", this.node, other.node);
     this.expression_ = undefined;
     this.keyRanges_ = undefined;
+    return this;
   }
 
   expression() {
