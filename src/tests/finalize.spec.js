@@ -6,7 +6,7 @@ const { expect } = require("chai");
 const sinon = require("sinon");
 
 const {
-  ArrayObjectStore,
+  JSONObjectStore,
   CompositeUnion,
   Expression,
   GroupBy,
@@ -35,9 +35,9 @@ describe("Optimize", function() {
 
   beforeEach(function() {
     let data = [1, 2];
-    arrayS = new ArrayObjectStore(data);
+    arrayS = new JSONObjectStore(data);
     namedS = new NamedRelation(arrayS, "s");
-    arrayT = new ArrayObjectStore(data);
+    arrayT = new JSONObjectStore(data);
     namedT = new NamedRelation(arrayT, "t");
   })
 
@@ -299,7 +299,7 @@ describe("Optimize", function() {
     })
 
     it("does not add transaction node if no PersistentObjectStore nodes", function() {
-      let objectStore = new ArrayObjectStore([]);
+      let objectStore = new JSONObjectStore([]);
       let named = new NamedRelation(objectStore, "e");
 
       let analyzed = prepareTransaction(named);

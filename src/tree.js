@@ -4,7 +4,7 @@ const { ValueMap, ValueSet } = require("valuecollection");
 
 const { Observable } = require("./rx");
 const { Aggregate } = require("./aggregate");
-const { TermGroups } = require("./expression");
+const { PrimaryKey, TermGroups } = require("./expression");
 const { cmp } = require("./idbbase");
 const { traversePath } = require("./traverse");
 
@@ -58,26 +58,26 @@ class ObjectStore extends Relation {
   }
 }
 
-class ArrayObjectStore extends ObjectStore {
-  constructor(array) {
+class JSONObjectStore extends ObjectStore {
+  constructor(object) {
     super();
-    this.array = array;
+    this.object = object;
   }
 
   execute(context) {
-    return Observable.from(this.array);
+    return Observable.create(observer => {
+      for (let n in this.object) {
+        if (has.call(this.object, n))
+          observer.next(Object.assign({[PrimaryKey]: n}, this.object[n]));
+      }
+      observer.complete();
+    });
   }
 
   tree() {
-    let result = {
+    return {
       class: this.constructor.name,
-    };
-
-    return result;
-  }
-
-  isCommon(b) {
-    return this.array === b.array;
+    };;
   }
 };
 
@@ -526,7 +526,7 @@ class Memoize extends Relation {
 }
 
 module.exports = {
-  ArrayObjectStore,
+  JSONObjectStore,
   Relation,
   CompositeUnion,
   Context,

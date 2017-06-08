@@ -5,7 +5,7 @@ require("./indexeddb-fill.js");
 const { expect } = require("chai");
 const sinon = require("sinon");
 
-const { ArrayObjectStore, NamedRelation } = require("..");
+const { JSONObjectStore, NamedRelation } = require("..");
 const { deleteFrom, insert, select, update, upsert } = require("../querybuilder");
 
 let sandbox = sinon.sandbox.create();
@@ -22,14 +22,14 @@ describe("fluentquery query builder", function() {
       {id: 2, name: "Banana", calories: 105, type_id: 1},
       {id: 3, name: "Cake", calories: 235, type_id: 2},
     ];
-    thingStore = new ArrayObjectStore(thing);
+    thingStore = new JSONObjectStore(thing);
     thingRelation = new NamedRelation(thingStore, "thing");
 
     type = [
       {id: 1, name: "Vegetable"},
       {id: 2, name: "Mineral"},
     ];
-    typeStore = new ArrayObjectStore(type);
+    typeStore = new JSONObjectStore(type);
     typeRelation = new NamedRelation(typeStore, "type");
   })
 
@@ -496,7 +496,7 @@ describe("fluentquery query builder", function() {
         relation: "value",
       },
       objectStore: {
-        class: "ArrayObjectStore",
+        class: "JSONObjectStore",
       },
       options: {
         overwrite: false,
@@ -518,7 +518,7 @@ describe("fluentquery query builder", function() {
         relation: "thing",
       },
       objectStore: {
-        class: "ArrayObjectStore",
+        class: "JSONObjectStore",
       },
       options: {
         overwrite: true,
@@ -539,7 +539,7 @@ describe("fluentquery query builder", function() {
         relation: "$$this",
       },
       objectStore: {
-        class: "ArrayObjectStore",
+        class: "JSONObjectStore",
       },
       options: {
         overwrite: true,
@@ -559,7 +559,7 @@ describe("fluentquery query builder", function() {
         relation: "$$this",
       },
       objectStore: {
-        class: "ArrayObjectStore",
+        class: "JSONObjectStore",
       },
       options: {
         overwrite: false,

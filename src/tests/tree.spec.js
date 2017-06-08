@@ -9,12 +9,13 @@ const sortBy = require("lodash/sortBy");
 
 const {
   Aggregate,
-  ArrayObjectStore,
+  JSONObjectStore,
   Context,
   Expression,
   GroupBy,
   Join,
   OrderBy,
+  PrimaryKey,
   Relation,
   Select,
   SetOperation,
@@ -48,14 +49,14 @@ describe("Tree", function() {
       {id: 2, name: "Banana", calories: 105, type_id: 1},
       {id: 3, name: "Cake", calories: 235, type_id: 2},
     ];
-    thingStore = new ArrayObjectStore(thing);
+    thingStore = new JSONObjectStore(thing);
     thingRelation = new NamedRelation(thingStore, "thing");
 
     type = [
       {id: 1, name: "Vegetable"},
       {id: 2, name: "Mineral"},
     ];
-    typeStore = new ArrayObjectStore(type);
+    typeStore = new JSONObjectStore(type);
     typeRelation = new NamedRelation(typeStore, "type");
     context = new Context({ p1: 1, p2: 2 });
     visitor = {};
@@ -65,16 +66,29 @@ describe("Tree", function() {
     sandbox.restore();
   })
 
-  describe("ArrayObjectStore", function() {
+  describe("JSONObjectStore", function() {
     it("accepts", function() {
-      visitor.ArrayObjectStore = sandbox.stub();
+      visitor.JSONObjectStore = sandbox.stub();
       traverse(typeStore, visitor);
-      sinon.assert.calledOnce(visitor.ArrayObjectStore);
+      sinon.assert.calledOnce(visitor.JSONObjectStore);
     })
 
-    it("executes ArrayObjectStore", function() {
+    it("executes JSONObjectStore wrapped array", function() {
       return resultArray(typeStore.execute()).then(result => {
         expect(result).to.deep.equal(type);
+      });
+    })
+
+    it("executes JSONObjectStore wrapped object", function() {
+      let objectStore = new JSONObjectStore({
+        a: {title: "A"},
+        b: {title: "B"},
+      });
+      return resultArray(objectStore.execute()).then(result => {
+        expect(result).to.deep.equal([
+          {[PrimaryKey]: "a", title: "A"},
+          {[PrimaryKey]: "b", title: "B"},
+        ]);
       });
     });
   })
@@ -128,11 +142,11 @@ describe("Tree", function() {
 
   describe("NamedRelation", function() {
     it("accepts", function() {
-      visitor.ArrayObjectStore = sandbox.stub();
+      visitor.JSONObjectStore = sandbox.stub();
       visitor.NamedRelation = sandbox.stub();
       traverse(typeRelation, visitor);
       sinon.assert.calledOnce(visitor.NamedRelation);
-      sinon.assert.calledOnce(visitor.ArrayObjectStore);
+      sinon.assert.calledOnce(visitor.JSONObjectStore);
     });
 
     it("schema", function() {

@@ -5,7 +5,7 @@ const { finalize } = require("./finalize");
 const { traverse } = require("./traverse");
 
 const {
-  ArrayObjectStore,
+  JSONObjectStore,
   CompositeUnion,
   Context,
   GroupBy,
@@ -47,7 +47,7 @@ const makeInnerJoin = (relationMap) => {
       if (relation instanceof ObjectStore) {
         // fin
       } else if (Array.isArray(relation)) {
-        relation = new ArrayObjectStore(relation);
+        relation = new JSONObjectStore(relation);
       } else if (typeof relation === "function" && relation[QUERY]) {
         relation = relation.relation();
       } else {
