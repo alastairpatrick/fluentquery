@@ -2,10 +2,10 @@
 
 const { TermGroups, parseExpression } = require("./expression");
 const { finalize } = require("./finalize");
+const { JSONObjectStore } = require("./jsonobjectstore");
 const { traverse } = require("./traverse");
 
 const {
-  JSONObjectStore,
   CompositeUnion,
   Context,
   GroupBy,

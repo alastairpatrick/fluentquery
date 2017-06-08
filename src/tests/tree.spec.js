@@ -66,33 +66,6 @@ describe("Tree", function() {
     sandbox.restore();
   })
 
-  describe("JSONObjectStore", function() {
-    it("accepts", function() {
-      visitor.JSONObjectStore = sandbox.stub();
-      traverse(typeStore, visitor);
-      sinon.assert.calledOnce(visitor.JSONObjectStore);
-    })
-
-    it("executes JSONObjectStore wrapped array", function() {
-      return resultArray(typeStore.execute()).then(result => {
-        expect(result).to.deep.equal(type);
-      });
-    })
-
-    it("executes JSONObjectStore wrapped object", function() {
-      let objectStore = new JSONObjectStore({
-        a: {title: "A"},
-        b: {title: "B"},
-      });
-      return resultArray(objectStore.execute()).then(result => {
-        expect(result).to.deep.equal([
-          {[PrimaryKey]: "a", title: "A"},
-          {[PrimaryKey]: "b", title: "B"},
-        ]);
-      });
-    });
-  })
-
   describe("Select", function() {
     it("accepts", function() {
       visitor.Select = sandbox.stub();

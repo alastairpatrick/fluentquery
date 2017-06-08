@@ -4,7 +4,7 @@ const { ValueMap, ValueSet } = require("valuecollection");
 
 const { Observable } = require("./rx");
 const { Aggregate } = require("./aggregate");
-const { PrimaryKey, TermGroups } = require("./expression");
+const { TermGroups } = require("./expression");
 const { cmp } = require("./idbbase");
 const { traversePath } = require("./traverse");
 
@@ -57,29 +57,6 @@ class ObjectStore extends Relation {
     super();
   }
 }
-
-class JSONObjectStore extends ObjectStore {
-  constructor(object) {
-    super();
-    this.object = object;
-  }
-
-  execute(context) {
-    return Observable.create(observer => {
-      for (let n in this.object) {
-        if (has.call(this.object, n))
-          observer.next(Object.assign({[PrimaryKey]: n}, this.object[n]));
-      }
-      observer.complete();
-    });
-  }
-
-  tree() {
-    return {
-      class: this.constructor.name,
-    };;
-  }
-};
 
 // This represents SQL SELECT rather than relational algebra SELECT. In relational algebra
 // terms, this resembles projection, i.e. selecting particular columns.
@@ -526,8 +503,6 @@ class Memoize extends Relation {
 }
 
 module.exports = {
-  JSONObjectStore,
-  Relation,
   CompositeUnion,
   Context,
   GroupBy,
@@ -535,6 +510,7 @@ module.exports = {
   Memoize,
   NamedRelation,
   OrderBy,
+  Relation,
   Select,
   SetOperation,
   ObjectStore,
