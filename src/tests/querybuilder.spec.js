@@ -633,14 +633,10 @@ describe("fluentquery query builder", function() {
   })
 
   it("runs cached sub-queries only once per execution context", function() {
-    let count = 0;
-    let storeGetter = () => {
-      ++count;
-      return type;
-    }
+    sandbox.spy(typeStore, "execute");
 
     let subquery = select `type`
-                    .from ({type: storeGetter})
+                    .from ({type: typeStore})
                  .memoize;
 
     let query = select `{id1: type1.id, id2: type2.id}`
@@ -655,7 +651,7 @@ describe("fluentquery query builder", function() {
         { id1: 2, id2: 2 },
       ]);
 
-      expect(count).to.equal(1);
+      sinon.assert.calledOnce(typeStore.execute);
     });
   })
   

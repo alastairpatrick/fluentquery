@@ -8,13 +8,12 @@ const {
   ArrayObjectStore,
   CompositeUnion,
   Context,
-  FunctionObjectStore,
   GroupBy,
   Join,
   Memoize,
   NamedRelation,
+  ObjectStore,
   OrderBy,
-  Relation,
   Select,
   SetOperation,
   Where,
@@ -45,15 +44,12 @@ const makeInnerJoin = (relationMap) => {
     if (has.call(relationMap, n)) {
       let relation = relationMap[n];
 
-      if (relation instanceof Relation) {
+      if (relation instanceof ObjectStore) {
         // fin
       } else if (Array.isArray(relation)) {
         relation = new ArrayObjectStore(relation);
-      } else if (typeof relation === "function") {
-        if (relation[QUERY])
-          relation = relation.relation();
-        else
-          relation = new FunctionObjectStore(relation);
+      } else if (typeof relation === "function" && relation[QUERY]) {
+        relation = relation.relation();
       } else {
         throw new Error(`Bad relation type for "${n}".`);
       }

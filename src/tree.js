@@ -81,26 +81,6 @@ class ArrayObjectStore extends ObjectStore {
   }
 };
 
-class FunctionObjectStore extends ObjectStore {
-  constructor(fn) {
-    super();
-    this.fn = fn;
-  }
-
-  execute(context) {
-    let observable = this.fn(context.params);
-    if (observable instanceof Observable)
-      return observable;
-    return Observable.from(observable);
-  }
-
-  tree() {
-    return {
-      class: this.constructor.name,
-    }
-  }
-};
-
 // This represents SQL SELECT rather than relational algebra SELECT. In relational algebra
 // terms, this resembles projection, i.e. selecting particular columns.
 class Select extends Relation {
@@ -550,7 +530,6 @@ module.exports = {
   Relation,
   CompositeUnion,
   Context,
-  FunctionObjectStore,
   GroupBy,
   Join,
   Memoize,
