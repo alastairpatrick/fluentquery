@@ -222,7 +222,7 @@ describe("IndexedDB integration", function() {
       let observable = book.put(context, [
         {title: "Quarry", isbn: 123456},
         {title: "Water", isbn: 234567},
-      ]);
+      ], true);
       return resultArray(observable).then(results => {
         expect(results).to.deep.equal([
           {title: "Quarry", isbn: 123456},
@@ -243,7 +243,7 @@ describe("IndexedDB integration", function() {
     it("inserts new row", function() {
       let observable = book.put(context, [
         {title: "Database", author: "O'Neil", isbn: 9781558603929}
-      ], {overwrite: false});
+      ], false);
 
       return resultArray(observable).then(results => {
         expect(results).to.deep.equal([
@@ -265,7 +265,7 @@ describe("IndexedDB integration", function() {
     it("inserts new row with autoincrementing key", function() {
       let observable = store.put(context, [
         {city: "Boston"}
-      ]);
+      ], false);
 
       return resultArray(observable).then(results => {
         expect(results).to.deep.equal([
@@ -287,7 +287,7 @@ describe("IndexedDB integration", function() {
     it("insert fails for existing row", function() {
       let observable = book.put(context, [
         {title: "Quarry", isbn: 123456}
-      ], {overwrite: false});
+      ], false);
 
       return resultArray(observable).then(() => {
         throw new Error("No error");
@@ -299,7 +299,7 @@ describe("IndexedDB integration", function() {
     it("updates existing row of store with composite key", function() {
       let observable = inventoryItem.put(context, [
         {storeId: 1, isbn: 234567, quantity: 44},
-      ]);
+      ], true);
       return resultArray(observable).then(results => {
         expect(results).to.deep.equal([
           {storeId: 1, isbn: 234567, quantity: 44},
@@ -355,6 +355,27 @@ describe("IndexedDB integration", function() {
             {storeId: 1, isbn: 345678, quantity: 5},
             {storeId: 2, isbn: 123456, quantity: 1},
             {storeId: 2, isbn: 234567, quantity: 2},      
+          ]);
+        });
+      });
+    })
+
+    it("ignores deletion of non-existent key", function() {
+      let observable = store.delete(context, [
+        {[PrimaryKey]: 333}
+      ]);
+
+      return resultArray(observable).then(results => {
+        expect(results).to.deep.equal([
+          {[PrimaryKey]: 333},
+        ]);
+
+        let observable = store.execute(context);
+        return resultArray(observable).then(results => {
+          expect(results).to.deep.equal([
+            {[PrimaryKey]: 1, city: "San Francisco"},
+            {[PrimaryKey]: 2, city: "San Francisco"},
+            {[PrimaryKey]: 3, city: "New York City"},
           ]);
         });
       });

@@ -207,13 +207,9 @@ class PersistentObjectStore extends ObjectStore {
     }
   }
 
-  put(context, tuples, options) {
-    options = Object.assign({
-      overwrite: true,
-    }, options);
-
+  put(context, tuples, overwrite) {
     let store = context.transaction.objectStore(this.name);
-    let method = options.overwrite ? store.put.bind(store) : store.add.bind(store);
+    let method = overwrite ? store.put.bind(store) : store.add.bind(store);
 
     let setKeyPath = keyPathSetter(store);
 
