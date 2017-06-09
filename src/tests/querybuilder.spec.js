@@ -535,7 +535,7 @@ describe("fluentquery query builder", function() {
       class: "Write",
       relation: {
         class: "Select",
-        selector: "Object.assign({}, $$this, { name: $$this.name.toLowerCase() })",
+        selector: "Object.assign({ [PrimaryKey]: $$this[PrimaryKey] }, $$this, { name: $$this.name.toLowerCase() })",
         relation: "$$this",
       },
       objectStore: {

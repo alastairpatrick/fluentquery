@@ -576,6 +576,27 @@ describe("IndexedDB integration", function() {
     });
   })
 
+  it("can update tuples in object store with null primary key", function() {
+    let query = update `{ city: "Boston" }`
+                 .into (store)
+                .where `this.city == "San Francisco"`
+
+    return query.then(result => {
+      expect(result).to.deep.equal([
+        {city: "Boston"},
+        {city: "Boston"},
+      ]);
+
+      return select `store` .from ({store}) .then(results => {
+        expect(results).to.deep.equal([
+          {city: "Boston"},
+          {city: "Boston"},
+          {city: "New York City"},
+        ]);
+      });
+    });
+  })
+
   it("can delete tuples from object store", function() {
     let query = deleteFrom (book)
                     .where `this.isbn == 234567`

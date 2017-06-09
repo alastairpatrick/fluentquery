@@ -209,13 +209,29 @@ class PersistentObjectStore extends ObjectStore {
 
   put(context, tuples, overwrite) {
     let store = context.transaction.objectStore(this.name);
-    let method = overwrite ? store.put.bind(store) : store.add.bind(store);
+    let method;
+    if (store.keyPath === null) {
+      if (overwrite)
+        method = (v) => store.put(v, v[PrimaryKey]);
+      else
+        method = (v) => store.add(v, v[PrimaryKey]);
+    } else {
+      if (overwrite)
+        method = (v) => store.put(v);
+      else
+        method = (v) => store.add(v);
+    }
+
+    if (store.keyPath === null) {
+      method 
+    }
 
     let setKeyPath = keyPathSetter(store);
 
     let requests = [];
     for (let i = 0; i < tuples.length; ++i) {
-      let request = method(tuples[i]);
+      let tuple = tuples[i];
+      let request = method(tuple, tuple[PrimaryKey]);
 
       // This error handler will be replaced when something subscribes to the observable.
       request.onerror = function(event) {

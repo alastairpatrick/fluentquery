@@ -160,7 +160,7 @@ const newQuery = (command) => {
 
       if (command === "update") {
         selector = Array.from(selector);
-        selector[0] = "Object.assign({}, this, " + selector[0];
+        selector[0] = "Object.assign({[PrimaryKey]: this[PrimaryKey]}, this, " + selector[0];
         selector[selector.length - 1] += ")";
       }
 
