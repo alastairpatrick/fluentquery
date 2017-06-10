@@ -3,6 +3,7 @@
 const { TermGroups, parseExpression } = require("./expression");
 const { finalize } = require("./finalize");
 const { JSONObjectStore } = require("./jsonobjectstore");
+const { Transaction, getTransaction } = require("./transaction");
 const { traverse } = require("./traverse");
 
 const {
@@ -95,7 +96,12 @@ const newQuery = (command) => {
     let relation = query.finalize();
 
     let context = new Context(params);
-    context.transaction = transaction;
+
+    if (transaction === undefined || transaction instanceof Transaction)
+      context.transaction = transaction;
+    else
+      context.transaction = getTransaction(transaction);
+
     let observable = context.execute(relation);
     return new QueryResult(observable);
   }

@@ -21,6 +21,7 @@ const {
   SetOperation,
   NamedRelation,
   TermGroups,
+  Transaction,
   Where,
   Write,
   parseExpression,
@@ -59,6 +60,7 @@ describe("Tree", function() {
     typeStore = new JSONObjectStore(type);
     typeRelation = new NamedRelation(typeStore, "type");
     context = new Context({ p1: 1, p2: 2 });
+    context.transaction = new Transaction();
     visitor = {};
   })
 

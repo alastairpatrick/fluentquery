@@ -154,8 +154,7 @@ const prepareTransaction = (root) => {
     }
   });
 
-  if (db !== undefined)
-    root = new TransactionNode(root, db, objectStoreNames, mode);
+  root = new TransactionNode(root, db, objectStoreNames, mode);
 
   return root;
 }

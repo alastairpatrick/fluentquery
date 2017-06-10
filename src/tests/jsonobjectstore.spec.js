@@ -2,6 +2,7 @@
 
 require("./indexeddb-fill.js");
 
+const sortBy = require("lodash/sortBy");
 const { expect } = require("chai");
 const sinon = require("sinon");
 
@@ -11,6 +12,7 @@ const {
   NamedRelation,
   PrimaryKey,
   Range,
+  Transaction,
   traverse,
 } = require("..");
 
@@ -23,6 +25,13 @@ const resultArray = (observable) => {
 }
 
 describe("JSONObjectStore", function() {
+  let context;
+
+  beforeEach(function() {
+    context = new Context();
+    context.transaction = new Transaction();
+  })
+
   afterEach(function() {
     sandbox.restore();
   })
@@ -93,6 +102,9 @@ describe("JSONObjectStore", function() {
           {[PrimaryKey]: 1, title: "NewB"},
         ]);
 
+        // TODO: Make transaction commit automatically even when not associated with IDBTransaction.
+        context.transaction.onComplete();
+
         expect(tuples).to.deep.equal([
           {title: "A"},
           {title: "NewB"},
@@ -113,6 +125,7 @@ describe("JSONObjectStore", function() {
         ], false)).then(() => {
         expect.fail("Did not fail");
       }).catch(error => {
+        console.log(error);
         expect(error).to.match(/'1'/);
       });
     })
@@ -129,6 +142,13 @@ describe("JSONObjectStore", function() {
         expect(result).to.deep.equal([
           {[PrimaryKey]: 2, title: "C"},
         ]);
+
+        expect(tuples).to.deep.equal([
+          {title: "A"},
+          {title: "B"},
+        ]);
+
+        context.transaction.onComplete();
 
         expect(tuples).to.deep.equal([
           {title: "A"},
@@ -151,18 +171,25 @@ describe("JSONObjectStore", function() {
           {[PrimaryKey]: 3, title: "C"},
         ]);
 
-        expect(tuples).to.deep.equal([
-          {title: "A"},
-          {title: "B"},
-          undefined,
-          {title: "C"},
-        ]);
-
         return resultArray(objectStore.execute(context)).then(result => {
-          expect(result).to.deep.equal([
+          expect(sortBy(result, "title")).to.deep.equal([
             {[PrimaryKey]: 0, title: "A"},
             {[PrimaryKey]: 1, title: "B"},
             {[PrimaryKey]: 3, title: "C"},
+          ]);
+
+          expect(tuples).to.deep.equal([
+            {title: "A"},
+            {title: "B"},
+          ]);
+
+          context.transaction.onComplete();
+
+          expect(tuples).to.deep.equal([
+            {title: "A"},
+            {title: "B"},
+            undefined,
+            {title: "C"},
           ]);
         });
       });
@@ -182,16 +209,24 @@ describe("JSONObjectStore", function() {
           {[PrimaryKey]: 1, title: "Hello"},
         ]);
 
-        expect(tuples).to.deep.equal([
-          {title: "A"},
-          undefined,
-          {title: "C"},
-        ]);
-
         return resultArray(objectStore.execute(context)).then(result => {
           expect(result).to.deep.equal([
             {[PrimaryKey]: 0, title: "A"},
             {[PrimaryKey]: 2, title: "C"},
+          ]);
+
+          expect(tuples).to.deep.equal([
+            {title: "A"},
+            {title: "B"},
+            {title: "C"},
+          ]);
+
+          context.transaction.onComplete();
+
+          expect(tuples).to.deep.equal([
+            {title: "A"},
+            undefined,
+            {title: "C"},
           ]);
         });
       });
@@ -210,15 +245,17 @@ describe("JSONObjectStore", function() {
           {[PrimaryKey]: 2, title: "Hello"},
         ]);
 
-        expect(tuples).to.deep.equal([
-          {title: "A"},
-          {title: "B"},
-        ]);
-
         return resultArray(objectStore.execute(context)).then(result => {
           expect(result).to.deep.equal([
             {[PrimaryKey]: 0, title: "A"},
             {[PrimaryKey]: 1, title: "B"},
+          ]);
+
+          context.transaction.onComplete();
+
+          expect(tuples).to.deep.equal([
+            {title: "A"},
+            {title: "B"},
           ]);
         });
       });
@@ -285,6 +322,13 @@ describe("JSONObjectStore", function() {
 
         expect(tuples).to.deep.equal({
           a: {title: "A"},
+          b: {title: "B"},
+        });
+
+        context.transaction.onComplete();
+
+        expect(tuples).to.deep.equal({
+          a: {title: "A"},
           b: {title: "NewB"},
         });
 
@@ -323,6 +367,13 @@ describe("JSONObjectStore", function() {
         expect(tuples).to.deep.equal({
           a: {title: "A"},
           b: {title: "B"},
+        });
+
+        context.transaction.onComplete();
+
+        expect(tuples).to.deep.equal({
+          a: {title: "A"},
+          b: {title: "B"},
           c: {title: "C"},
         });
       });
@@ -342,16 +393,24 @@ describe("JSONObjectStore", function() {
           {[PrimaryKey]: "b", title: "Hello"},
         ]);
 
-        expect(tuples).to.deep.equal({
-          a: {title: "A"},
-          c: {title: "C"},
-        });
-
         return resultArray(objectStore.execute(context)).then(result => {
           expect(result).to.deep.equal([
             {[PrimaryKey]: "a", title: "A"},
             {[PrimaryKey]: "c", title: "C"},
           ]);
+
+          expect(tuples).to.deep.equal({
+            a: {title: "A"},
+            b: {title: "B"},
+            c: {title: "C"},
+          });
+
+          context.transaction.onComplete();
+
+          expect(tuples).to.deep.equal({
+            a: {title: "A"},
+            c: {title: "C"},
+          });
         });
       });
     })
@@ -369,16 +428,18 @@ describe("JSONObjectStore", function() {
           {[PrimaryKey]: "c", title: "Hello"},
         ]);
 
-        expect(tuples).to.deep.equal({
-          a: {title: "A"},
-          b: {title: "B"},
-        });
-
         return resultArray(objectStore.execute(context)).then(result => {
           expect(result).to.deep.equal([
             {[PrimaryKey]: "a", title: "A"},
             {[PrimaryKey]: "c", title: "B"},
           ]);
+
+          context.transaction.onComplete();
+
+          expect(tuples).to.deep.equal({
+            a: {title: "A"},
+            b: {title: "B"},
+          });
         });
       });
     })

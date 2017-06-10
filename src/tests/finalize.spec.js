@@ -298,12 +298,17 @@ describe("Optimize", function() {
       });
     })
 
-    it("does not add transaction node if no PersistentObjectStore nodes", function() {
+    it("adds transaction node even if no PersistentObjectStore nodes", function() {
       let objectStore = new JSONObjectStore([]);
       let named = new NamedRelation(objectStore, "e");
 
       let analyzed = prepareTransaction(named);
-      expect(analyzed.tree()).to.deep.equal("e");
+      expect(analyzed.tree()).to.deep.equal({
+        class: "TransactionNode",
+        relation: "e",
+        objectStoreNames: [],
+        mode: "readonly",
+      });
     })
 
     it("throws if PersistentObjectStores from multiple databases accessed", function() {

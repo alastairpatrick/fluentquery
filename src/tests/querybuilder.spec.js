@@ -14,7 +14,6 @@ describe("fluentquery query builder", function() {
   let thing, type;
   let thingStore, typeStore;
   let thingRelation, typeRelation;
-  let context;
 
   beforeEach(function() {
     thing = [

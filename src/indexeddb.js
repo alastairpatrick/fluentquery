@@ -6,6 +6,7 @@ const { IDBKeyRange } = require("./idbbase");
 const { Range, compositeRange, includes } = require("./range");
 const { traversePath } = require("./traverse");
 const { PrimaryKey } = require("./expression");
+const { Transaction, getTransaction } = require("./transaction");
 const { ObjectStore } = require("./tree");
 
 const has = Object.prototype.hasOwnProperty;
@@ -175,7 +176,7 @@ class PersistentObjectStore extends ObjectStore {
   }
 
   execute(context, keyRanges) {
-    let store = context.transaction.objectStore(this.name);
+    let store = context.transaction.idbTransaction.objectStore(this.name);
     let best = this.chooseBestIndex(store, keyRanges);
 
     if (best.ranges === undefined) {
@@ -208,7 +209,7 @@ class PersistentObjectStore extends ObjectStore {
   }
 
   put(context, tuples, overwrite) {
-    let store = context.transaction.objectStore(this.name);
+    let store = context.transaction.idbTransaction.objectStore(this.name);
     let method;
     if (store.keyPath === null) {
       if (overwrite)
@@ -290,7 +291,7 @@ class PersistentObjectStore extends ObjectStore {
   }
 
   delete(context, tuples) {
-    let store = context.transaction.objectStore(this.name);
+    let store = context.transaction.idbTransaction.objectStore(this.name);
     let getKeyPath = keyPathGetter(store);
 
     let requests = [];
@@ -343,8 +344,12 @@ class TransactionNode {
 
   execute(context) {
     context.db = this.db;
-    if (context.transaction === undefined)
-      context.transaction = this.db.transaction(Array.from(this.objectStoreNames), this.mode);
+    if (context.transaction === undefined) {
+      if (this.db)
+        context.transaction = getTransaction(this.db.transaction(Array.from(this.objectStoreNames), this.mode));
+      else
+        context.transaction = new Transaction();
+    }
     return context.execute(this.relation);
   }
 

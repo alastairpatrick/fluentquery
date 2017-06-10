@@ -13,6 +13,8 @@ class JSONObjectStore extends ObjectStore {
   }
 
   execute(context, keyRanges) {
+    let view = context.transaction.view(this.tuples);
+
     if (keyRanges && has.call(keyRanges, PrimaryKey)) {
       let keyRange = keyRanges[PrimaryKey];
       if (keyRange.isEquality()) {
@@ -20,7 +22,9 @@ class JSONObjectStore extends ObjectStore {
         return Observable.create(observer => {
           for (let i = 0; i < prepared.length; ++i) {
             let n = prepared[i].lower;
-            observer.next(Object.assign({[PrimaryKey]: n}, this.tuples[n]));
+            let v = view[n];
+            if (v !== undefined)
+              observer.next(Object.assign({[PrimaryKey]: n}, v));
           }
           observer.complete();
         });
@@ -28,20 +32,23 @@ class JSONObjectStore extends ObjectStore {
     }
 
     return Observable.create(observer => {
-      for (let n in this.tuples) {
-        if (has.call(this.tuples, n))
-          observer.next(Object.assign({[PrimaryKey]: n}, this.tuples[n]));
+      for (let n in view) {
+        let v = view[n];
+        if (v !== undefined)
+          observer.next(Object.assign({[PrimaryKey]: n}, v));
       }
       observer.complete();
     });
   }
 
   put(context, tuples, overwrite) {
+    let view = context.transaction.view(this.tuples);
+
     if (!overwrite) {
       for (let i = 0; i < tuples.length; ++i) {
         let tuple = tuples[i];
         let k = tuple[PrimaryKey];
-        if (has.call(this.tuples, k)) {
+        if (view[k] !== undefined) {
           return Observable.create(observer =>
             observer.error(new Error(`Tuple with primary key '${k}' already exists.`)));
         }
@@ -53,17 +60,21 @@ class JSONObjectStore extends ObjectStore {
       let k = tuple[PrimaryKey];
       let v = Object.assign({}, tuple);
       delete v[PrimaryKey];
-      this.tuples[k] = v;
+      view[k] = v;
     }
 
     return Observable.from(tuples);
   }
 
   delete(context, tuples) {
+    let view = context.transaction.view(this.tuples);
+
     for (let i = 0; i < tuples.length; ++i) {
       let tuple = tuples[i];
       let k = tuple[PrimaryKey];
-      delete this.tuples[k];
+
+      // When modifying the view, assign undefined to identify deleted tuples. When the transaction commits, the underlying tuple will be deleted for real.
+      view[k] = undefined;
     }
     return Observable.from(tuples);
   }

@@ -16,6 +16,7 @@ const {
   PrimaryKey,
   Range,
   deleteFrom,
+  getTransaction,
   select,
   insert,
   update
@@ -94,8 +95,11 @@ describe("IndexedDB integration", function() {
    })
 
   describe("PersistentObjectStore", function() {
+    let idbTransaction;
+
     beforeEach(function() {
-      context.transaction = db.transaction(["book", "inventoryItem", "store"], "readwrite");
+      idbTransaction = db.transaction(["book", "inventoryItem", "store"], "readwrite");
+      context.transaction = getTransaction(idbTransaction);
     })
 
     it("retrieves all rows", function() {
@@ -126,7 +130,7 @@ describe("IndexedDB integration", function() {
         isbn: new Range(123456,123456),
       };
 
-      let objectStore = context.transaction.objectStore("book");
+      let objectStore = idbTransaction.objectStore("book");
       let best = book.chooseBestIndex(objectStore, keyRanges);
       expect(best.index).to.equal(objectStore);
       expect(best.ranges).to.deep.equal([keyRanges.isbn]);
@@ -139,7 +143,7 @@ describe("IndexedDB integration", function() {
         isbn: new Range(123456, 123456),
       };
 
-      let objectStore = context.transaction.objectStore("book");
+      let objectStore = idbTransaction.objectStore("book");
       let best = book.chooseBestIndex(objectStore, keyRanges);
       expect(best.index).to.equal(objectStore);
       expect(best.ranges).to.deep.equal([keyRanges.isbn]);
@@ -152,7 +156,7 @@ describe("IndexedDB integration", function() {
         title: new Range("Quarry Memories", "Quarry Memories"),
       };
 
-      let objectStore = context.transaction.objectStore("book");
+      let objectStore = idbTransaction.objectStore("book");
       let best = book.chooseBestIndex(objectStore, keyRanges);
       expect(best.index).to.equal(objectStore.index("byTitle"));
       expect(best.ranges).to.deep.equal([keyRanges.title]);
@@ -164,7 +168,7 @@ describe("IndexedDB integration", function() {
         author: new Range("Fred", "Fred"),
       };
 
-      let objectStore = context.transaction.objectStore("book");
+      let objectStore = idbTransaction.objectStore("book");
       let best = book.chooseBestIndex(objectStore, keyRanges);
       expect(best.index).to.equal(objectStore.index("byAuthor"));
       expect(best.ranges).to.deep.equal([keyRanges.author]);
@@ -176,7 +180,7 @@ describe("IndexedDB integration", function() {
         rating: new Range(3, 5),
       };
 
-      let objectStore = context.transaction.objectStore("book");
+      let objectStore = idbTransaction.objectStore("book");
       let best = book.chooseBestIndex(objectStore, keyRanges);
       expect(best.index).to.be.undefined;
     });
@@ -187,7 +191,7 @@ describe("IndexedDB integration", function() {
         isbn: new Range(100, 200),
       };
 
-      let objectStore = context.transaction.objectStore("inventoryItem");
+      let objectStore = idbTransaction.objectStore("inventoryItem");
       let best = inventoryItem.chooseBestIndex(objectStore, keyRanges);
       expect(best.index).to.equal(objectStore);
       expect(best.ranges).to.deep.equal([keyRanges.storeId, keyRanges.isbn]);
@@ -200,7 +204,7 @@ describe("IndexedDB integration", function() {
         isbn: new Range(100, 200),
       };
 
-      let objectStore = context.transaction.objectStore("inventoryItem");
+      let objectStore = idbTransaction.objectStore("inventoryItem");
       let best = inventoryItem.chooseBestIndex(objectStore, keyRanges);
       expect(best.index).to.equal(objectStore);
       expect(best.ranges).to.deep.equal([keyRanges.storeId]);
@@ -212,7 +216,7 @@ describe("IndexedDB integration", function() {
         isbn: new Range(100, 200),
       };
 
-      let objectStore = context.transaction.objectStore("inventoryItem");
+      let objectStore = idbTransaction.objectStore("inventoryItem");
       let best = inventoryItem.chooseBestIndex(objectStore, keyRanges);
       expect(best.index).to.equal(objectStore.index("byISBN"));
       expect(best.ranges).to.deep.equal([keyRanges.isbn]);
@@ -615,7 +619,7 @@ describe("IndexedDB integration", function() {
     });
   })
 
-  it("can execute queries in particular transaction", function() {
+  it("can execute queries in particular IDB transaction", function() {
     let updateTitle = update `{ title: $newTitle }`
                        .into (book)
                       .where `this.isbn == $isbn`
@@ -624,7 +628,36 @@ describe("IndexedDB integration", function() {
                          .from ({book})
                         .where `book.title == "Water Buffaloes"`
 
-    let transaction = db.transaction(["book"], "readwrite");
+    let idbTransaction = db.transaction(["book"], "readwrite");
+    let found;
+    return findBuffaloes({}, idbTransaction).then(books => {
+      return updateTitle({isbn: books[0].isbn, newTitle: "Replaced"}, idbTransaction);
+    }).then(updated => {
+      let query = select `{title: book.title, isbn: book.isbn}`
+                  .from ({book})
+                .orderBy `book.title`;
+
+      return query.then(result => {
+        expect(result).to.deep.equal([
+          {isbn: 345678, title: "Bedrock Nights"},
+          {isbn: 123456, title: "Quarry Memories"},
+          {isbn: 234567, title: "Replaced"},
+        ]);
+      });
+    });
+  })
+
+  it("can execute queries in particular Transaction", function() {
+    let updateTitle = update `{ title: $newTitle }`
+                       .into (book)
+                      .where `this.isbn == $isbn`
+
+    let findBuffaloes = select `book`
+                         .from ({book})
+                        .where `book.title == "Water Buffaloes"`
+
+    let idbTransaction = db.transaction(["book"], "readwrite");
+    let transaction = getTransaction(idbTransaction);
     let found;
     return findBuffaloes({}, transaction).then(books => {
       return updateTitle({isbn: books[0].isbn, newTitle: "Replaced"}, transaction);
