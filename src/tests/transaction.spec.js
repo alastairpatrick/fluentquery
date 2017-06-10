@@ -4,15 +4,21 @@ const { expect } = require("chai");
 const sinon = require("sinon");
 
 const {
+  Context,
+  JSONObjectStore,
+  PrimaryKey,
   Transaction,
+  TransactionNode,
+  Write,
 } = require("..");
 
 let sandbox = sinon.sandbox.create();
 
-describe("transaction", function() {
+describe("Transaction", function() {
   let transaction;
+  let context;
   let object;
-
+  
   beforeEach(function() {
     transaction = new Transaction();
     object = {
@@ -36,35 +42,131 @@ describe("transaction", function() {
     expect(object.existing).to.equal(1);
   })
 
-  it("onComplete applies property changes to underlying", function() {
+  it("complete applies property changes to underlying", function() {
     let view = transaction.view(object);
     view.existing = 2;
-    transaction.onComplete();
+    transaction.complete();
     expect(object.existing).to.equal(2);
   })
 
-  it("onComplete applies property deletions to underlying", function() {
+  it("complete applies property deletions to underlying", function() {
     let view = transaction.view(object);
     view.existing = undefined;
-    transaction.onComplete();
+    transaction.complete();
     expect(object).to.not.have.property("existing");
   })
 
-  it("onComplete applies property changes to underlying only once", function() {
+  it("complete applies property changes to underlying only once", function() {
     let view = transaction.view(object);
     view.existing = 2;
-    transaction.onComplete();
+    transaction.complete();
     expect(object.existing).to.equal(2);
     object.existing = 3;
-    transaction.onComplete();
+    transaction.complete();
     expect(object.existing).to.equal(3);
   })
 
-  it("onComplete does nothing after onAbort", function() {
+  it("complete does nothing after abort", function() {
     let view = transaction.view(object);
     view.existing = 2;
-    transaction.onAbort();
-    transaction.onComplete();
-    expect(object.existing).to.equal(1);
+    transaction.abort();
+    return transaction.then(() => {}).catch(error => {
+      transaction.complete();
+      expect(object.existing).to.equal(1);
+    });
+  })
+
+  it("complete resolves transaction", function() {
+    transaction.complete();
+    return transaction.then(() => {}).catch(error => {
+      expect.fail("Caught error");
+    });
+  })
+
+  it("abort rejects transaction", function() {
+    transaction.abort(new Error("Foo"));
+    return transaction.then(() => {
+      expect.fail("Transaction shoould not succeed");
+    }).catch(error => {
+      expect(error).to.match(/Foo/);
+    });
+  })
+
+  it("abort aborts IDB transaction", function() {
+    transaction.idbTransaction = {
+      abort: sinon.stub(),
+    };
+    transaction.abort(new Error("Foo"))
+    return transaction.then(() => {}, error => {
+      sinon.assert.calledOnce(transaction.idbTransaction.abort);
+    });
+  })
+})
+
+describe("TransactionNode", function() {
+  let transaction, context;
+
+  beforeEach(function() {
+    transaction = new Transaction();
+    context = new Context();
+    context.transaction = transaction;
+  })
+
+  it("aborts transaction on error", function() {
+    let tuples = {
+      a: {title: "A"},
+    };
+    let objectStore = new JSONObjectStore(tuples);
+
+    // Will attempt to insert existing rows, causing a failing primary key conflict.
+    let write = new Write(objectStore, objectStore, { overwrite: false });
+
+    let transactionNode = new TransactionNode(write);
+    
+    context.execute(transactionNode).subscribe((v) => {
+      expect.fail("Unexpected next tuple");
+    }, error => {
+      expect(error).to.match(/'a'/);
+    }, complete => {
+      expect.fail("Not expected to complete");
+    });
+
+    return transaction.then(() => {
+      expect.fail("Transaction should not succeed.");
+    }).catch(error => {
+      expect(error).to.match(/'a'/);
+    });
+  })
+
+  it("skips query if transaction already completed", function() {
+    let tuples = {
+      a: {title: "A"},
+    };
+    let objectStore = new JSONObjectStore(tuples);
+    let transactionNode = new TransactionNode(objectStore);
+    transaction.complete();
+    context.execute(transactionNode).subscribe((v) => {
+      expect.fail("Unexpected next tuple");
+    }, error => {
+      expect(error).to.match(/settled/);
+    }, complete => {
+      expect.fail("Not expected to complete");
+    });
+  })
+
+  it("skips query if transaction already aborted", function() {
+    let tuples = {
+      a: {title: "A"},
+    };
+    let objectStore = new JSONObjectStore(tuples);
+    let transactionNode = new TransactionNode(objectStore);
+    transaction.abort();
+    context.execute(transactionNode).subscribe((v) => {
+      expect.fail("Unexpected next tuple");
+    }, error => {
+      expect(error).to.match(/settled/);
+    }, complete => {
+      expect.fail("Not expected to complete");
+    });
   })
 })

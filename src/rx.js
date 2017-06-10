@@ -1,6 +1,8 @@
 const { Observable } = require("rxjs/Observable");
 require("rxjs/add/observable/empty");
 require("rxjs/add/observable/from");
+require("rxjs/add/observable/throw");
+require("rxjs/add/operator/catch");
 require("rxjs/add/operator/concat");
 require("rxjs/add/operator/defaultIfEmpty");
 require("rxjs/add/operator/filter");

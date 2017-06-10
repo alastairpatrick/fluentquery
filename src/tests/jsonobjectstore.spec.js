@@ -102,8 +102,7 @@ describe("JSONObjectStore", function() {
           {[PrimaryKey]: 1, title: "NewB"},
         ]);
 
-        // TODO: Make transaction commit automatically even when not associated with IDBTransaction.
-        context.transaction.onComplete();
+        context.transaction.complete();
 
         expect(tuples).to.deep.equal([
           {title: "A"},
@@ -125,7 +124,6 @@ describe("JSONObjectStore", function() {
         ], false)).then(() => {
         expect.fail("Did not fail");
       }).catch(error => {
-        console.log(error);
         expect(error).to.match(/'1'/);
       });
     })
@@ -147,8 +145,7 @@ describe("JSONObjectStore", function() {
           {title: "A"},
           {title: "B"},
         ]);
-
-        context.transaction.onComplete();
+        context.transaction.complete();
 
         expect(tuples).to.deep.equal([
           {title: "A"},
@@ -182,8 +179,7 @@ describe("JSONObjectStore", function() {
             {title: "A"},
             {title: "B"},
           ]);
-
-          context.transaction.onComplete();
+          context.transaction.complete();
 
           expect(tuples).to.deep.equal([
             {title: "A"},
@@ -220,8 +216,7 @@ describe("JSONObjectStore", function() {
             {title: "B"},
             {title: "C"},
           ]);
-
-          context.transaction.onComplete();
+          context.transaction.complete();
 
           expect(tuples).to.deep.equal([
             {title: "A"},
@@ -250,8 +245,7 @@ describe("JSONObjectStore", function() {
             {[PrimaryKey]: 0, title: "A"},
             {[PrimaryKey]: 1, title: "B"},
           ]);
-
-          context.transaction.onComplete();
+          context.transaction.complete();
 
           expect(tuples).to.deep.equal([
             {title: "A"},
@@ -324,8 +318,7 @@ describe("JSONObjectStore", function() {
           a: {title: "A"},
           b: {title: "B"},
         });
-
-        context.transaction.onComplete();
+        context.transaction.complete();
 
         expect(tuples).to.deep.equal({
           a: {title: "A"},
@@ -368,8 +361,7 @@ describe("JSONObjectStore", function() {
           a: {title: "A"},
           b: {title: "B"},
         });
-
-        context.transaction.onComplete();
+        context.transaction.complete();
 
         expect(tuples).to.deep.equal({
           a: {title: "A"},
@@ -404,8 +396,7 @@ describe("JSONObjectStore", function() {
             b: {title: "B"},
             c: {title: "C"},
           });
-
-          context.transaction.onComplete();
+          context.transaction.complete();
 
           expect(tuples).to.deep.equal({
             a: {title: "A"},
@@ -433,8 +424,7 @@ describe("JSONObjectStore", function() {
             {[PrimaryKey]: "a", title: "A"},
             {[PrimaryKey]: "c", title: "B"},
           ]);
-
-          context.transaction.onComplete();
+          context.transaction.complete();
 
           expect(tuples).to.deep.equal({
             a: {title: "A"},

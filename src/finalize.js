@@ -1,8 +1,8 @@
 "use strict";
 
 const { TermGroups } = require("./expression");
-const { TransactionNode } = require("./indexeddb");
 const { RangeIntersection } = require("./range");
+const { TransactionNode } = require("./transaction");
 const { traverse } = require("./traverse");
 const { Join, NamedRelation, OrderBy, Relation, ObjectStore, Where } = require("./tree");
 
