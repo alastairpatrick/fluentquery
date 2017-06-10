@@ -269,7 +269,7 @@ describe("Optimize", function() {
 
       let analyzed = prepareTransaction(named);
       expect(analyzed.tree()).to.deep.equal({
-        class: "Transaction",
+        class: "TransactionNode",
         objectStoreNames: ["employee"],
         relation: "e",
         mode: "readonly",
@@ -284,7 +284,7 @@ describe("Optimize", function() {
 
       let analyzed = prepareTransaction(write);
       expect(analyzed.tree()).to.deep.equal({
-        class: "Transaction",
+        class: "TransactionNode",
         relation: {
           class: "Write",
           options: {},

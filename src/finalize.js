@@ -1,7 +1,7 @@
 "use strict";
 
 const { TermGroups } = require("./expression");
-const { Transaction } = require("./indexeddb");
+const { TransactionNode } = require("./indexeddb");
 const { RangeIntersection } = require("./range");
 const { traverse } = require("./traverse");
 const { Join, NamedRelation, OrderBy, Relation, ObjectStore, Where } = require("./tree");
@@ -155,7 +155,7 @@ const prepareTransaction = (root) => {
   });
 
   if (db !== undefined)
-    root = new Transaction(root, db, objectStoreNames, mode);
+    root = new TransactionNode(root, db, objectStoreNames, mode);
 
   return root;
 }

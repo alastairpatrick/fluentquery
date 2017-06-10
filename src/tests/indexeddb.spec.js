@@ -11,7 +11,7 @@ const IDBKeyRange = require("fake-indexeddb/lib/FDBKeyRange");
 
 const {
   Context,
-  Transaction,
+  TransactionNode,
   PersistentObjectStore,
   PrimaryKey,
   Range,
@@ -382,8 +382,8 @@ describe("IndexedDB integration", function() {
     })
   })
 
-  it("wraps transaction with Transaction", function() {
-    let transaction = new Transaction(book, db, new Set(["book"], "readonly"));
+  it("wraps transaction with TransactionNode", function() {
+    let transaction = new TransactionNode(book, db, new Set(["book"], "readonly"));
     let observable = transaction.execute(context);
     return resultArray(observable).then(results => {
       expect(results).to.deep.equal([

@@ -189,7 +189,7 @@ class PersistentObjectStore extends ObjectStore {
         if (prepared.length === 0)
           return observable;
         if (prepared.length > 1 || !prepared[0].isEquality())
-          throw new Error("Intial index ranges must all be equalities");
+          throw new Error("Initial index ranges must all be equalities");
         equals.push(prepared[0].lower);
       }
 
@@ -333,7 +333,7 @@ class PersistentObjectStore extends ObjectStore {
   }
 }
 
-class Transaction {
+class TransactionNode {
   constructor(relation, db, objectStoreNames, mode) {
     this.relation = relation;
     this.db = db;
@@ -360,5 +360,5 @@ class Transaction {
 
 module.exports = {
   PersistentObjectStore,
-  Transaction,
+  TransactionNode,
 };
