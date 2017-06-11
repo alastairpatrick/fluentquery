@@ -629,7 +629,6 @@ describe("IndexedDB integration", function() {
                         .where `book.title == "Water Buffaloes"`
 
     let idbTransaction = db.transaction(["book"], "readwrite");
-    let found;
     return findBuffaloes({}, idbTransaction).then(books => {
       return updateTitle({isbn: books[0].isbn, newTitle: "Replaced"}, idbTransaction);
     }).then(updated => {
@@ -658,7 +657,6 @@ describe("IndexedDB integration", function() {
 
     let idbTransaction = db.transaction(["book"], "readwrite");
     let transaction = getTransaction(idbTransaction);
-    let found;
     return findBuffaloes({}, transaction).then(books => {
       return updateTitle({isbn: books[0].isbn, newTitle: "Replaced"}, transaction);
     }).then(updated => {
@@ -671,6 +669,28 @@ describe("IndexedDB integration", function() {
           {isbn: 345678, title: "Bedrock Nights"},
           {isbn: 123456, title: "Quarry Memories"},
           {isbn: 234567, title: "Replaced"},
+        ]);
+      });
+    });
+  })
+
+  it("updates even if observable is not consumed", function() {
+    let updateTitle = update `{ title: this.title.toLowerCase() }`
+                       .into (book)
+
+    let idbTransaction = db.transaction(["book"], "readwrite");
+    let transaction = getTransaction(idbTransaction);
+    updateTitle({}, transaction);
+    return transaction.then(() => {
+      let query = select `{title: book.title, isbn: book.isbn}`
+                  .from ({book})
+                .orderBy `book.title`;
+
+      return query.then(result => {
+        expect(result).to.deep.equal([
+          {isbn: 345678, title: "bedrock nights"},
+          {isbn: 123456, title: "quarry memories"},
+          {isbn: 234567, title: "water buffaloes"},
         ]);
       });
     });

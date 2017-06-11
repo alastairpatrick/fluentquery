@@ -108,9 +108,13 @@ class Write extends Relation {
 
     // All the tuples are collected in an array before applying any modifications
     // so that the modifications are not prematurely visible to the query.
-    return observable.toArray().map(tuples => {
+    // publishReplay so that the map() below is run for its side-effects even if
+    // the observable returned by this function is not itself consumed.
+    observable = observable.toArray().map(tuples => {
       return method(context, tuples, this.options.overwrite);
-    }).mergeAll();
+    }).mergeAll().publishReplay();
+    observable.connect();
+    return observable;
   }
 
   accept(context) {

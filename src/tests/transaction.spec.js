@@ -161,6 +161,7 @@ describe("TransactionNode", function() {
     let objectStore = new JSONObjectStore(tuples);
     let transactionNode = new TransactionNode(objectStore);
     transaction.abort();
+    transaction.then(() => {}).catch(error => {});
     context.execute(transactionNode).subscribe((v) => {
       expect.fail("Unexpected next tuple");
     }, error => {
