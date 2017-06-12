@@ -38,23 +38,39 @@ describe("Transaction", function() {
   it("complete settles", function() {
     transaction.complete();
     expect(transaction.settled).to.be.true;      
+    return transaction.then(() => {
+    }).catch(error => {
+      expect.fail("Caught error");
+    });
   })
   
   it("abort settles", function() {
     transaction.abort();
     expect(transaction.settled).to.be.true;      
+    return transaction.then(() => {
+      expect.fail("Transaction should not succeed");
+    }).catch(error => {
+    });
   })
 
   it("complete emits event", function() {
     transaction.complete();
     sinon.assert.calledOnce(completed);
     sinon.assert.notCalled(aborted);
+    return transaction.then(() => {
+    }).catch(error => {
+      expect.fail("Caught error");
+    });
   })
 
   it("abort emits event", function() {
     transaction.abort();
     sinon.assert.calledOnce(aborted);
     sinon.assert.notCalled(completed);
+    return transaction.then(() => {
+      expect.fail("Transaction should not succeed");
+    }).catch(error => {
+    });
   })
 
   it("can only complete once", function() {
@@ -62,6 +78,10 @@ describe("Transaction", function() {
     transaction.complete();
     sinon.assert.calledOnce(completed);
     sinon.assert.notCalled(aborted);
+    return transaction.then(() => {
+    }).catch(error => {
+      expect.fail("Caught error");
+    });
   })
 
   it("cannot complete after aborting", function() {
@@ -69,6 +89,10 @@ describe("Transaction", function() {
     transaction.complete();
     sinon.assert.calledOnce(aborted);
     sinon.assert.notCalled(completed);
+    return transaction.then(() => {
+      expect.fail("Transaction should not succeed");
+    }).catch(error => {
+    });
   })
 
   it("cannot abort once", function() {
@@ -76,6 +100,10 @@ describe("Transaction", function() {
     transaction.abort();
     sinon.assert.calledOnce(aborted);
     sinon.assert.notCalled(completed);
+    return transaction.then(() => {
+      expect.fail("Transaction should not succeed");
+    }).catch(error => {
+    });
   })
 
   it("cannot abort after completing", function() {
@@ -83,22 +111,9 @@ describe("Transaction", function() {
     transaction.abort();
     sinon.assert.calledOnce(completed);
     sinon.assert.notCalled(aborted);
-  })
-
-  it("complete resolves transaction", function() {
-    transaction.complete();
     return transaction.then(() => {
     }).catch(error => {
       expect.fail("Caught error");
-    });
-  })
-
-  it("abort rejects transaction", function() {
-    transaction.abort(new Error("Foo"));
-    return transaction.then(() => {
-      expect.fail("Transaction should not succeed");
-    }).catch(error => {
-      expect(error).to.match(/Foo/);
     });
   })
 
