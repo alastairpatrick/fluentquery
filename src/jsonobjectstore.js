@@ -5,6 +5,55 @@ const { ObjectStore } = require("./tree");
 
 const has = Object.prototype.hasOwnProperty;
 
+const transactionHelpers = new WeakMap();
+
+class TransactionHelper {
+  constructor(transaction) {
+    this.viewMap = new Map();
+    transaction.on("complete", this.onComplete, this);
+    transaction.on("abort", this.onAbort, this);
+  }
+
+  getView(object) {
+    let view = this.viewMap.get(object);
+    if (view !== undefined)
+      return view;
+    
+    view = Object.create(object);
+    this.viewMap.set(object, view);
+    return view;
+  }
+  
+  onComplete() {
+    for (let [object, view] of this.viewMap) {
+      for (let n in view) {
+        if (has.call(view, n)) {
+          let v = view[n];
+          if (v === undefined)
+            delete object[n];
+          else
+            object[n] = view[n];
+        }
+      }
+    }
+
+    this.viewMap = undefined;
+  }
+
+  onAbort() {
+    this.viewMap = undefined;
+  }
+}
+
+const getJSONView = (transaction, object) => {
+  let helper = transactionHelpers.get(transaction);
+  if (helper === undefined) {
+    helper = new TransactionHelper(transaction);
+    transactionHelpers.set(transaction, helper);
+  }
+
+  return helper.getView(object);
+}
 
 class JSONObjectStore extends ObjectStore {
   constructor(tuples) {
@@ -13,7 +62,7 @@ class JSONObjectStore extends ObjectStore {
   }
 
   execute(context, keyRanges) {
-    let view = context.transaction.view(this.tuples);
+    let view = getJSONView(context.transaction, this.tuples);
 
     if (keyRanges && has.call(keyRanges, PrimaryKey)) {
       let keyRange = keyRanges[PrimaryKey];
@@ -42,7 +91,7 @@ class JSONObjectStore extends ObjectStore {
   }
 
   put(context, tuples, overwrite) {
-    let view = context.transaction.view(this.tuples);
+    let view = getJSONView(context.transaction, this.tuples);
 
     if (!overwrite) {
       for (let i = 0; i < tuples.length; ++i) {
@@ -67,7 +116,7 @@ class JSONObjectStore extends ObjectStore {
   }
 
   delete(context, tuples) {
-    let view = context.transaction.view(this.tuples);
+    let view = getJSONView(context.transaction, this.tuples);
 
     for (let i = 0; i < tuples.length; ++i) {
       let tuple = tuples[i];
@@ -88,4 +137,5 @@ class JSONObjectStore extends ObjectStore {
 
 module.exports = {
   JSONObjectStore,
+  getJSONView,
 }

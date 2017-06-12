@@ -13,6 +13,7 @@ const {
   PrimaryKey,
   Range,
   Transaction,
+  getJSONView,
   traverse,
 } = require("..");
 
@@ -23,6 +24,58 @@ const resultArray = (observable) => {
     observable.toArray().subscribe(resolve, reject);
   });
 }
+
+describe("JSONTransaction", function() {
+  let transaction;
+  let object;
+  
+  beforeEach(function() {
+    transaction = new Transaction();
+    object = {
+      existing: 1,
+    };
+  })
+
+  it("one view per object per transaction", function() {
+    let view1 = getJSONView(transaction, object);
+    let view2 = getJSONView(transaction, object);
+    expect(view1).to.equal(view2);
+
+    let transaction2 = new Transaction();
+    let view3 = getJSONView(transaction2, object);
+    expect(view1).to.not.equal(view3);
+  })
+
+  it("can modify view of object without modifying underlying", function() {
+    let view = getJSONView(transaction, object);
+    view.existing = 2;
+    expect(object.existing).to.equal(1);
+  })
+
+  it("complete applies property changes to underlying", function() {
+    let view = getJSONView(transaction, object);
+    view.existing = 2;
+    transaction.complete();
+    expect(object.existing).to.equal(2);
+  })
+
+  it("complete applies property deletions to underlying", function() {
+    let view = getJSONView(transaction, object);
+    view.existing = undefined;
+    transaction.complete();
+    expect(object).to.not.have.property("existing");
+  })
+
+  it("complete applies property changes to underlying only once", function() {
+    let view = getJSONView(transaction, object);
+    view.existing = 2;
+    transaction.complete();
+    expect(object.existing).to.equal(2);
+    object.existing = 3;
+    transaction.complete();
+    expect(object.existing).to.equal(3);
+  })
+})
 
 describe("JSONObjectStore", function() {
   let context;

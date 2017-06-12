@@ -9,63 +9,35 @@ class Transaction extends EventEmitter {
   constructor() {
     super();
     this.settled = false;
-    this.viewMap = new Map();
     
     this.promise = new Promise((resolve, reject) => {
-      this.complete = (v) => {
-        this.onComplete();
-        resolve(v);
+      this.onComplete = (v) => {
+        if (!this.settled) {
+          this.settled = true;
+          this.emit("complete");
+          resolve(v);
+        }
         return this;
       };
-      this.abort = (error) => {
-        reject(error);
-        this.onAbort();
+      this.onAbort = (error) => {
+        if (!this.settled) {
+          this.settled = true;
+          this.emit("abort");
+          reject(error);
+        }
         return this;
       };
     });
   }
 
-  view(object) {
-    let view = this.viewMap.get(object);
-    if (view !== undefined)
-      return view;
-    
-    view = Object.create(object);
-    this.viewMap.set(object, view);
-    return view;
-  }
-  
-  onComplete() {
-    if (this.settled)
-      return;
-    this.settled = true;
-
-    for (let [object, view] of this.viewMap) {
-      for (let n in view) {
-        if (has.call(view, n)) {
-          let v = view[n];
-          if (v === undefined)
-            delete object[n];
-          else
-            object[n] = view[n];
-        }
-      }
-    }
-
-    this.viewMap = undefined;
-    this.emit("complete");
+  complete() {
+    this.onComplete();
   }
 
-  onAbort() {
-    if (this.settled)
-      return;
-    this.settled = true;
-
-    this.viewMap = undefined;
+  abort(error) {
     if (this.idbTransaction)
       this.idbTransaction.abort();
-
-    this.emit("abort");
+    this.onAbort(error);
   }
 
   then(resolved, rejected) {
@@ -84,10 +56,10 @@ const getTransaction = (idbTransaction) => {
   transaction.idbTransaction = idbTransaction;
 
   idbTransaction.addEventListener("abort", () => {
-    transaction.abort(idbTransaction.error);
+    transaction.onAbort(idbTransaction.error);
   });
   idbTransaction.addEventListener("complete", () => {
-    transaction.complete();
+    transaction.onComplete();
   });
 
   transactions.set(idbTransaction, transaction);
