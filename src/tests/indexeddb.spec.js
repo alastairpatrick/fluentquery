@@ -544,9 +544,7 @@ describe("IndexedDB integration", function() {
                  ]})
 
     return query.then(result => {
-      expect(result).to.deep.equal([
-        { title: "Database", author: "O'Neil", isbn: 9781558603929 },
-      ]);
+      expect(result).to.deep.equal([{ count: 1 }]);
 
       return select `book` .from ({book}) .then(results => {
         expect(results).to.deep.equal([
@@ -564,11 +562,7 @@ describe("IndexedDB integration", function() {
                  .into (book)
 
     return query.then(result => {
-      expect(result).to.deep.equal([
-        {title: "quarry memories", author: "Fred", isbn: 123456},
-        {title: "water buffaloes", author: "Fred", isbn: 234567},
-        {title: "bedrock nights", author: "Barney", isbn: 345678},
-      ]);
+      expect(result).to.deep.equal([{ count: 3 }]);
 
       return select `book` .from ({book}) .then(results => {
         expect(results).to.deep.equal([
@@ -586,10 +580,7 @@ describe("IndexedDB integration", function() {
                 .where `this.city == "San Francisco"`
 
     return query.then(result => {
-      expect(result).to.deep.equal([
-        {city: "Boston"},
-        {city: "Boston"},
-      ]);
+      expect(result).to.deep.equal([{ count: 2 }]);
 
       return select `store` .from ({store}) .then(results => {
         expect(results).to.deep.equal([
@@ -606,9 +597,7 @@ describe("IndexedDB integration", function() {
                     .where `this.isbn == 234567`
 
     return query.then(result => {
-      expect(result).to.deep.equal([
-        {title: "Water Buffaloes", author: "Fred", isbn: 234567},
-      ]);
+      expect(result).to.deep.equal([{ count: 1 }]);
 
       return select `book` .from ({book}) .then(results => {
         expect(results).to.deep.equal([

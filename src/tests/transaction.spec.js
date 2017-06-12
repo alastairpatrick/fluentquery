@@ -119,7 +119,7 @@ describe("TransactionNode", function() {
     let objectStore = new JSONObjectStore(tuples);
 
     // Will attempt to insert existing rows, causing a failing primary key conflict.
-    let write = new Write(objectStore, objectStore, { overwrite: false });
+    let write = new Write(objectStore, objectStore);
 
     let transactionNode = new TransactionNode(write);
     

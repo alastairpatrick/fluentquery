@@ -4,6 +4,7 @@ require("rxjs/add/observable/from");
 require("rxjs/add/observable/throw");
 require("rxjs/add/operator/catch");
 require("rxjs/add/operator/concat");
+require("rxjs/add/operator/count");
 require("rxjs/add/operator/defaultIfEmpty");
 require("rxjs/add/operator/filter");
 require("rxjs/add/operator/isEmpty");

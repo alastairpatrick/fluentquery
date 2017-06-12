@@ -497,10 +497,6 @@ describe("fluentquery query builder", function() {
       objectStore: {
         class: "JSONObjectStore",
       },
-      options: {
-        overwrite: false,
-        delete: false,
-      },
     });
   })
 
@@ -519,10 +515,7 @@ describe("fluentquery query builder", function() {
       objectStore: {
         class: "JSONObjectStore",
       },
-      options: {
-        overwrite: true,
-        delete: false,
-      },
+      overwrite: true,
     });
   })
 
@@ -540,10 +533,27 @@ describe("fluentquery query builder", function() {
       objectStore: {
         class: "JSONObjectStore",
       },
-      options: {
-        overwrite: true,
-        delete: false,
+      overwrite: true,
+    });
+  })
+
+  it("builds update returning tuples", function() {
+    let query = update `{name: this.name.toLowerCase()}`
+                 .into (thingStore)
+            .returning `{name: this.name.toUpperCase()}`
+
+    expect(query.tree()).to.deep.equal({
+      class: "Write",
+      relation: {
+        class: "Select",
+        selector: "Object.assign({ [PrimaryKey]: $$this[PrimaryKey] }, $$this, { name: $$this.name.toLowerCase() })",
+        relation: "$$this",
       },
+      objectStore: {
+        class: "JSONObjectStore",
+      },
+      returning: "{ name: $$this.name.toUpperCase() }",
+      overwrite: true,
     });
   })
 
@@ -560,10 +570,7 @@ describe("fluentquery query builder", function() {
       objectStore: {
         class: "JSONObjectStore",
       },
-      options: {
-        overwrite: false,
-        delete: true,
-      },
+      delete: true,
     });
   })
 

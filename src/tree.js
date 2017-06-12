@@ -89,18 +89,20 @@ class Select extends Relation {
 }
 
 class Write extends Relation {
-  constructor(relation, objectStore, options) {
+  constructor(relation, objectStore) {
     super();
     this.relation = relation;
     this.objectStore = objectStore;
-    this.options = options;
+    this.overwrite = false;
+    this.delete = false;
+    this.returning = undefined;
   }
 
   execute(context) {
     let observable = context.execute(this.relation);
     
     let method;
-    if (this.options.delete) {
+    if (this.delete) {
       method = this.objectStore.delete.bind(this.objectStore);
     } else {
       method = this.objectStore.put.bind(this.objectStore);
@@ -111,8 +113,17 @@ class Write extends Relation {
     // publishReplay so that the map() below is run for its side-effects even if
     // the observable returned by this function is not itself consumed.
     observable = observable.toArray().map(tuples => {
-      return method(context, tuples, this.options.overwrite);
-    }).mergeAll().publishReplay();
+      return method(context, tuples, this.overwrite);
+    }).mergeAll();
+    
+    if (this.returning) {
+      let prepared = this.returning.prepare(context);
+      observable = observable.map(prepared);
+    } else {
+      observable = observable.count().map(n => ({ count: n }));
+    }
+    
+    observable = observable.publishReplay();
     observable.connect();
     return observable;
   }
@@ -127,9 +138,15 @@ class Write extends Relation {
       class: this.constructor.name,
       relation: this.relation.tree(),
       objectStore: this.objectStore.tree(),
-      options: this.options,
     }
-    
+
+    if (this.overwrite)
+      result.overwrite = this.overwrite;
+    if (this.delete)
+      result.delete = this.delete;
+    if (this.returning)
+      result.returning = this.returning.tree();
+          
     return result;
   }
 }

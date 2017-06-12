@@ -90,6 +90,8 @@ const newQuery = (command) => {
   let selector = undefined;
   let selectorSubst = undefined;
   let into = undefined;
+  let returning = undefined;
+  let returningSubst = undefined;
   let memoize = false;
 
   const query = (params={}, transaction=undefined) => {
@@ -137,10 +139,11 @@ const newQuery = (command) => {
         if (into === undefined)
           throw new Error("Use into() to specify object store to be updated.");
 
-        queryRelation = new Write(queryRelation, into, {
-          overwrite: command === "update" || command === "upsert",
-          "delete": command === "delete",
-        });
+        queryRelation = new Write(queryRelation, into);
+        queryRelation.overwrite = command === "update" || command === "upsert";
+        queryRelation.delete = command === "delete";
+        if (returning)
+          queryRelation.returning = parseExpression(returning, buildRelation.schema(), returningSubst);
       }
 
       return queryRelation;
@@ -185,6 +188,14 @@ const newQuery = (command) => {
       if (command === "update" || command === "delete")
         buildRelation = makeInnerJoin({"$$this": objectStore});
 
+      return chain(buildRelation);
+    },
+
+    returning(expression, ...args) {
+      if (returning !== undefined)
+        throw new Erroor("returning() alreaduy called");
+      returning = expression;
+      returningSubst = args;
       return chain(buildRelation);
     },
 

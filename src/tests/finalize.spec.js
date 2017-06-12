@@ -280,14 +280,13 @@ describe("Optimize", function() {
       let db = {};
       let objectStore = new PersistentObjectStore(db, "employee");
       let named = new NamedRelation(objectStore, "e");
-      let write = new Write(named, objectStore, {});
+      let write = new Write(named, objectStore);
 
       let analyzed = prepareTransaction(write);
       expect(analyzed.tree()).to.deep.equal({
         class: "TransactionNode",
         relation: {
           class: "Write",
-          options: {},
           relation: "e",
           objectStore: {
             "class": "PersistentObjectStore",

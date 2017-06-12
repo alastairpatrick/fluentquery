@@ -108,11 +108,32 @@ describe("Tree", function() {
     it("accepts", function() {
       visitor.Write = sandbox.stub();
       visitor.NamedRelation = sandbox.stub();
-      let write = new Write(thingRelation, thingStore, {})
+      let write = new Write(thingRelation, thingStore)
       traverse(write, visitor);
       sinon.assert.calledOnce(visitor.Write);
       sinon.assert.calledOnce(visitor.NamedRelation);
     })
+
+    it("replaces table with self", function() {
+      let write = new Write(thingRelation, thingStore)
+      write.overwrite = true;
+      return resultArray(write.execute(context)).then(result => {
+        expect(result).to.deep.equal([{ count: 3 }]);
+      });
+    });
+
+    it("applies function to returned tuples", function() {
+      let write = new Write(thingRelation, thingStore);
+      write.overwrite = true;
+      write.returning = new Expression(({thing}) => ({ name: thing.name.toUpperCase() }), {thing});
+      return resultArray(write.execute(context)).then(result => {
+        expect(result).to.deep.equal([
+          {name: "APPLE"},
+          {name: "BANANA"},
+          {name: "CAKE"},
+        ]);
+      });
+    });
   })
 
   describe("NamedRelation", function() {
