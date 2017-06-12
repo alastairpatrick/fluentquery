@@ -19,11 +19,18 @@ let sandbox = sinon.sandbox.create();
 
 describe("Transaction", function() {
   let transaction;
+  let completed;
+  let aborted;
   let context;
   let object;
   
   beforeEach(function() {
     transaction = new Transaction();
+    completed = sinon.stub();
+    transaction.on("complete", completed);
+    aborted = sinon.stub();
+    transaction.on("abort", aborted);
+
     object = {
       existing: 1,
     };
@@ -69,10 +76,6 @@ describe("Transaction", function() {
     expect(object.existing).to.equal(3);
   })
 
-  it("not initialli settled", function() {
-    expect(transaction.settled()).to.be.false;
-  });
-  
   it("complete does nothing after abort", function() {
     let view = transaction.view(object);
     view.existing = 2;
@@ -83,10 +86,63 @@ describe("Transaction", function() {
     });
   })
 
+  it("not initially settled", function() {
+    expect(transaction.settled).to.be.false;
+  })
+  
+  it("complete settles", function() {
+    transaction.complete();
+    expect(transaction.settled).to.be.true;      
+  })
+  
+  it("abort settles", function() {
+    transaction.abort();
+    expect(transaction.settled).to.be.true;      
+  })
+
+  it("complete emits event", function() {
+    transaction.complete();
+    sinon.assert.calledOnce(completed);
+    sinon.assert.notCalled(aborted);
+  })
+
+  it("abort emits event", function() {
+    transaction.abort();
+    sinon.assert.calledOnce(aborted);
+    sinon.assert.notCalled(completed);
+  })
+
+  it("can only complete once", function() {
+    transaction.complete();
+    transaction.complete();
+    sinon.assert.calledOnce(completed);
+    sinon.assert.notCalled(aborted);
+  })
+
+  it("cannot complete after aborting", function() {
+    transaction.abort();
+    transaction.complete();
+    sinon.assert.calledOnce(aborted);
+    sinon.assert.notCalled(completed);
+  })
+
+  it("cannot abort once", function() {
+    transaction.abort();
+    transaction.abort();
+    sinon.assert.calledOnce(aborted);
+    sinon.assert.notCalled(completed);
+  })
+
+  it("cannot abort after completing", function() {
+    transaction.complete();
+    transaction.abort();
+    sinon.assert.calledOnce(completed);
+    sinon.assert.notCalled(aborted);
+  })
+
   it("complete resolves transaction", function() {
     transaction.complete();
     return transaction.then(() => {
-      expect(transaction.settled()).to.be.true;      
     }).catch(error => {
       expect.fail("Caught error");
     });
@@ -97,7 +153,6 @@ describe("Transaction", function() {
     return transaction.then(() => {
       expect.fail("Transaction shoould not succeed");
     }).catch(error => {
-      expect(transaction.settled()).to.be.true;      
       expect(error).to.match(/Foo/);
     });
   })
@@ -144,7 +199,7 @@ describe("TransactionNode", function() {
     return transaction.then(() => {
       expect.fail("Transaction should not succeed.");
     }).catch(error => {
-      expect(transaction.settled()).to.be.true;
+      expect(transaction.settled).to.be.true;
       expect(error).to.match(/'a'/);
     });
   })
@@ -169,7 +224,7 @@ describe("TransactionNode", function() {
     return transaction.then(() => {
       expect.fail("Transaction should not succeed.");
     }).catch(error => {
-      expect(transaction.settled()).to.be.true;
+      expect(transaction.settled).to.be.true;
       expect(error).to.match(/foo/);
     });
   })

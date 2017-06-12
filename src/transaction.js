@@ -1,11 +1,14 @@
 "use strict";
 
+const EventEmitter = require('eventemitter3');
 const { Observable } = require("./rx");
 
 const has = Object.prototype.hasOwnProperty;
 
-class Transaction {
+class Transaction extends EventEmitter {
   constructor() {
+    super();
+    this.settled = false;
     this.viewMap = new Map();
     
     this.promise = new Promise((resolve, reject) => {
@@ -33,8 +36,9 @@ class Transaction {
   }
   
   onComplete() {
-    if (this.viewMap === undefined)
+    if (this.settled)
       return;
+    this.settled = true;
 
     for (let [object, view] of this.viewMap) {
       for (let n in view) {
@@ -49,16 +53,19 @@ class Transaction {
     }
 
     this.viewMap = undefined;
+    this.emit("complete");
   }
 
   onAbort() {
+    if (this.settled)
+      return;
+    this.settled = true;
+
     this.viewMap = undefined;
     if (this.idbTransaction)
       this.idbTransaction.abort();
-  }
 
-  settled() {
-    return this.viewMap === undefined;
+    this.emit("abort");
   }
 
   then(resolved, rejected) {
@@ -104,7 +111,7 @@ class TransactionNode {
         context.transaction = new Transaction();
     }
 
-    if (context.transaction.settled())
+    if (context.transaction.settled)
       return Observable.throw(new Error("Transaction already settled."));
 
     return context.execute(this.relation).catch(error => {
