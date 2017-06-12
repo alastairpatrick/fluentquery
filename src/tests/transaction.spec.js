@@ -6,10 +6,13 @@ const sinon = require("sinon");
 const {
   Context,
   JSONObjectStore,
+  NamedRelation,
   PrimaryKey,
+  Select,
   Transaction,
   TransactionNode,
   Write,
+  parseExpression,
 } = require("..");
 
 let sandbox = sinon.sandbox.create();
@@ -66,6 +69,10 @@ describe("Transaction", function() {
     expect(object.existing).to.equal(3);
   })
 
+  it("not initialli settled", function() {
+    expect(transaction.settled()).to.be.false;
+  });
+  
   it("complete does nothing after abort", function() {
     let view = transaction.view(object);
     view.existing = 2;
@@ -78,7 +85,9 @@ describe("Transaction", function() {
 
   it("complete resolves transaction", function() {
     transaction.complete();
-    return transaction.then(() => {}).catch(error => {
+    return transaction.then(() => {
+      expect(transaction.settled()).to.be.true;      
+    }).catch(error => {
       expect.fail("Caught error");
     });
   })
@@ -88,6 +97,7 @@ describe("Transaction", function() {
     return transaction.then(() => {
       expect.fail("Transaction shoould not succeed");
     }).catch(error => {
+      expect(transaction.settled()).to.be.true;      
       expect(error).to.match(/Foo/);
     });
   })
@@ -112,7 +122,7 @@ describe("TransactionNode", function() {
     context.transaction = transaction;
   })
 
-  it("aborts transaction on error", function() {
+  it("aborts transaction on Write error", function() {
     let tuples = {
       a: {title: "A"},
     };
@@ -134,7 +144,33 @@ describe("TransactionNode", function() {
     return transaction.then(() => {
       expect.fail("Transaction should not succeed.");
     }).catch(error => {
+      expect(transaction.settled()).to.be.true;
       expect(error).to.match(/'a'/);
+    });
+  })
+
+  it("aborts transaction on expression exception", function() {
+    let tuples = {
+      a: {title: "A"},
+    };
+    let objectStore = new JSONObjectStore(tuples);
+    let named = new NamedRelation(objectStore, "o");
+    let select = new Select(named, parseExpression("{ title: (() => { throw new Error('foo') })() }", {o: named}, []));
+    let transactionNode = new TransactionNode(select);
+    
+    context.execute(transactionNode).subscribe((v) => {
+      expect.fail("Unexpected next tuple");
+    }, error => {
+      expect(error).to.match(/foo/);
+    }, complete => {
+      expect.fail("Not expected to complete");
+    });
+
+    return transaction.then(() => {
+      expect.fail("Transaction should not succeed.");
+    }).catch(error => {
+      expect(transaction.settled()).to.be.true;
+      expect(error).to.match(/foo/);
     });
   })
 
