@@ -293,6 +293,12 @@ describe("IndexedDB integration", function() {
         {title: "Quarry", isbn: 123456}
       ], false);
 
+      context.transaction.then(() => {
+        expect.fail("Did not fail");
+      }).catch(error => {
+        expect(error).to.match(/Constraint/);
+      });
+
       return resultArray(observable).then(() => {
         throw new Error("No error");
       }).catch(error => {

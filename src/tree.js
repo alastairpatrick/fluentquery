@@ -116,6 +116,12 @@ class Write extends Relation {
       return method(context, tuples, this.overwrite);
     }).mergeAll();
     
+    let transaction = context.transaction;
+    observable = observable.catch(error => {
+      transaction.abort(error);
+      return Observable.throw(error);
+    });
+
     if (this.returning) {
       let prepared = this.returning.prepare(context);
       observable = observable.map(prepared);

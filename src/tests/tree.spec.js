@@ -115,7 +115,7 @@ describe("Tree", function() {
     })
 
     it("replaces table with self", function() {
-      let write = new Write(thingRelation, thingStore)
+      let write = new Write(thingStore, thingStore)
       write.overwrite = true;
       return resultArray(write.execute(context)).then(result => {
         expect(result).to.deep.equal([{ count: 3 }]);
@@ -132,6 +132,20 @@ describe("Tree", function() {
           {name: "BANANA"},
           {name: "CAKE"},
         ]);
+      });
+    });
+
+    it("aborts transaction on error, even if result is not consumed", function() {
+      // Write operation will try to add tuples with existing primary keys, causing an error.
+      let write = new Write(thingStore, thingStore);
+      write.overwrite = false;
+      write.returning = new Expression(({thing}) => ({ name: thing.name.toUpperCase() }), {thing});
+      sandbox.spy(context.transaction, "abort");
+      write.execute(context);
+      context.transaction.then(() => {
+        expect.fail("Did not fail");
+      }).catch(error => {
+        sinon.assert.calledOnce(context.transaction.abort);
       });
     });
   })

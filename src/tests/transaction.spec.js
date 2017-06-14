@@ -137,33 +137,6 @@ describe("TransactionNode", function() {
     context.transaction = transaction;
   })
 
-  it("aborts transaction on Write error", function() {
-    let tuples = {
-      a: {title: "A"},
-    };
-    let objectStore = new JSONObjectStore(tuples);
-
-    // Will attempt to insert existing rows, causing a failing primary key conflict.
-    let write = new Write(objectStore, objectStore);
-
-    let transactionNode = new TransactionNode(write);
-    
-    context.execute(transactionNode).subscribe((v) => {
-      expect.fail("Unexpected next tuple");
-    }, error => {
-      expect(error).to.match(/'a'/);
-    }, complete => {
-      expect.fail("Not expected to complete");
-    });
-
-    return transaction.then(() => {
-      expect.fail("Transaction should not succeed.");
-    }).catch(error => {
-      expect(transaction.settled).to.be.true;
-      expect(error).to.match(/'a'/);
-    });
-  })
-
   it("aborts transaction on expression exception", function() {
     let tuples = {
       a: {title: "A"},
