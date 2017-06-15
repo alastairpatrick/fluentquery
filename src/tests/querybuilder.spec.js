@@ -5,7 +5,7 @@ require("./indexeddb-fill.js");
 const { expect } = require("chai");
 const sinon = require("sinon");
 
-const { JSONObjectStore, NamedRelation } = require("..");
+const { JSONObjectStore, NamedRelation, Transaction } = require("..");
 const { deleteFrom, insert, select, update, upsert } = require("../querybuilder");
 
 let sandbox = sinon.sandbox.create();
@@ -676,5 +676,25 @@ describe("fluentquery query builder", function() {
               { name: "Apple" },
             ]);
           });
+  })
+
+  it("updates table at end of transaction", function() {
+    let query = update `{name: this.name.toLowerCase()}`
+                 .into (thingStore)
+
+    let transaction = new Transaction();
+    query({}, transaction);
+    expect(thing).to.deep.equal([
+      {id: 1, name: "Apple", calories: 95, type_id: 1},
+      {id: 2, name: "Banana", calories: 105, type_id: 1},
+      {id: 3, name: "Cake", calories: 235, type_id: 2},
+    ]);
+    return transaction.then(() => {
+      expect(thing).to.deep.equal([
+        {id: 1, name: "apple", calories: 95, type_id: 1},
+        {id: 2, name: "banana", calories: 105, type_id: 1},
+        {id: 3, name: "cake", calories: 235, type_id: 2},
+      ]);
+    });
   })
 })

@@ -5,11 +5,11 @@ const { Observable } = require("./rx");
 
 const has = Object.prototype.hasOwnProperty;
 
-class Transaction extends EventEmitter {
+class BaseTransaction extends EventEmitter {
   constructor() {
     super();
     this.settled = false;
-    
+
     this.promise = new Promise((resolve, reject) => {
       this.onComplete = (v) => {
         if (!this.settled) {
@@ -35,13 +35,52 @@ class Transaction extends EventEmitter {
   }
 
   abort(error) {
-    if (this.idbTransaction)
-      this.idbTransaction.abort();
     this.onAbort(error);
+  }
+
+  delayComplete() {
   }
 
   then(resolved, rejected) {
     return this.promise.then(resolved, rejected);
+  }
+}
+
+class PersistentTransaction extends BaseTransaction {
+  constructor(idbTransaction) {
+    super();
+    this.idbTransaction = idbTransaction;
+
+    idbTransaction.addEventListener("abort", () => {
+      this.onAbort(this.idbTransaction.error);
+    });
+    idbTransaction.addEventListener("complete", () => {
+      this.onComplete();
+    });
+  }
+
+  abort(error) {
+    this.idbTransaction.abort();
+    super.abort(error);
+  }
+}
+
+class Transaction extends BaseTransaction {
+  constructor() {
+    super();
+    this.immediateId = undefined;
+    this.delayComplete();
+  }
+
+  delayComplete() {
+    if (this.immediateId !== undefined)
+      clearImmediate(this.immediateId);
+    this.immediateId = setImmediate(() => {
+      this.immediateId = setImmediate(() => {
+        this.immediateId = undefined;
+        this.complete();
+      });
+    });
   }
 }
 
@@ -52,15 +91,7 @@ const getTransaction = (idbTransaction) => {
   if (transaction !== undefined)
     return transaction;
   
-  transaction = new Transaction();
-  transaction.idbTransaction = idbTransaction;
-
-  idbTransaction.addEventListener("abort", () => {
-    transaction.onAbort(idbTransaction.error);
-  });
-  idbTransaction.addEventListener("complete", () => {
-    transaction.onComplete();
-  });
+  transaction = new PersistentTransaction(idbTransaction);
 
   transactions.set(idbTransaction, transaction);
   return transaction;
@@ -86,6 +117,8 @@ class TransactionNode {
     if (context.transaction.settled)
       return Observable.throw(new Error("Transaction already settled."));
 
+    context.transaction.delayComplete();
+
     return context.execute(this.relation).catch(error => {
       context.transaction.abort(error);
       return Observable.throw(error);
@@ -103,6 +136,7 @@ class TransactionNode {
 }
 
 module.exports = {
+  BaseTransaction,
   Transaction,
   TransactionNode,
   getTransaction,

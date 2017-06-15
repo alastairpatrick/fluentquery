@@ -116,14 +116,56 @@ describe("Transaction", function() {
       expect.fail("Caught error");
     });
   })
-
-  it("abort aborts IDB transaction", function() {
-    transaction.idbTransaction = {
-      abort: sinon.stub(),
-    };
-    transaction.abort(new Error("Foo"));
-    return transaction.then(() => {}, error => {
-      sinon.assert.calledOnce(transaction.idbTransaction.abort);
+  
+  it("automatically settles", function(done) {
+    transaction.delayComplete();
+    setImmediate(() => {
+      expect(transaction.settled).to.be.false;
+      setImmediate(() => {
+        expect(transaction.settled).to.be.true;
+        done();
+      });
+    });
+  })
+  
+  it("can delay automatic settles", function(done) {
+    transaction.delayComplete();
+    setImmediate(() => {
+      expect(transaction.settled).to.be.false;
+      transaction.delayComplete();
+      setImmediate(() => {
+        expect(transaction.settled).to.be.false;
+        setImmediate(() => {
+          expect(transaction.settled).to.be.true;
+          done();
+        });
+      });
+    });
+  })
+  
+  it("automatically completes after delayComplete()", function(done) {
+    transaction.delayComplete();
+    transaction.on("complete", () => {
+      done();
+    });
+  })
+  
+  it("automatically resolves after delayComplete()", function(done) {
+    transaction.delayComplete();
+    transaction.then(() => {
+      done();
+    });
+  })
+  
+  it("automatically completes even if delayComplete() never called", function(done) {
+    transaction.on("complete", () => {
+      done();
+    });
+  })
+  
+  it("automatically resolves even if delayComplete() never called", function(done) {
+    transaction.then(() => {
+      done();
     });
   })
 })
@@ -192,6 +234,25 @@ describe("TransactionNode", function() {
       expect(error).to.match(/settled/);
     }, complete => {
       expect.fail("Not expected to complete");
+    });
+  })
+
+  it("delays transaction completion", function(done) {
+    let tuples = {
+      a: {title: "A"},
+    };
+    let objectStore = new JSONObjectStore(tuples);
+    let transactionNode = new TransactionNode(objectStore);
+    setImmediate(() => {
+      expect(transaction.settled).to.be.false;
+      context.execute(transactionNode);
+      setImmediate(() => {
+        expect(transaction.settled).to.be.false;
+        setImmediate(() => {
+          expect(transaction.settled).to.be.true;
+          done();
+        });
+      });
     });
   })
 })

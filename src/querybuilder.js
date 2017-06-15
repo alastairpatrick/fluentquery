@@ -3,7 +3,7 @@
 const { TermGroups, parseExpression } = require("./expression");
 const { finalize } = require("./finalize");
 const { JSONObjectStore } = require("./jsonobjectstore");
-const { Transaction, getTransaction } = require("./transaction");
+const { BaseTransaction, getTransaction } = require("./transaction");
 const { traverse } = require("./traverse");
 
 const {
@@ -99,7 +99,7 @@ const newQuery = (command) => {
 
     let context = new Context(params);
 
-    if (transaction === undefined || transaction instanceof Transaction)
+    if (transaction === undefined || transaction instanceof BaseTransaction)
       context.transaction = transaction;
     else
       context.transaction = getTransaction(transaction);
