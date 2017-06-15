@@ -113,7 +113,7 @@ class Write extends Relation {
     // publishReplay so that the map() below is run for its side-effects even if
     // the observable returned by this function is not itself consumed.
     observable = observable.toArray().map(tuples => {
-      return method(context, tuples, this.overwrite);
+      return method(context, tuples, this.overwrite, this.returning !== undefined);
     }).mergeAll();
     
     let transaction = context.transaction;

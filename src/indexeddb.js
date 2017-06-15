@@ -208,7 +208,10 @@ class PersistentObjectStore extends ObjectStore {
     }
   }
 
-  put(context, tuples, overwrite) {
+  put(context, tuples, overwrite, wantGenerated) {
+    if (tuples.length === 0)
+      return Observable.from([]);
+
     let store = context.transaction.idbTransaction.objectStore(this.name);
     let method;
     if (store.keyPath === null) {
@@ -223,102 +226,64 @@ class PersistentObjectStore extends ObjectStore {
         method = (v) => store.add(v);
     }
 
-    if (store.keyPath === null) {
-      method 
-    }
-
     let setKeyPath = keyPathSetter(store);
+    wantGenerated = wantGenerated && store.autoIncrement;
 
-    let requests = [];
-    for (let i = 0; i < tuples.length; ++i) {
-      let tuple = tuples[i];
-      let request = method(tuple, tuple[PrimaryKey]);
+    // In this path, the onsuccess callback provides the value of the auto-generated key.
+    return Observable.create(observer => {
+      let request;
+      for (let i = 0; i < tuples.length; ++i) {
+        let tuple = tuples[i];
+        request = method(tuple);
 
-      // This error handler will be replaced when something subscribes to the observable.
-      request.onerror = function(event) {
-        throw event.target.error;
-      }
-      
-      requests.push(request);
-    };
-
-    if (requests.length === 0)
-      return Observable.from([]);
-
-    if (store.autoIncrement && store.keyPath !== null) {
-      // In this path, the onsuccess callback provides the value of the auto-generated key.
-      return Observable.create(observer => {
-        tuples.forEach((tuple, i) => {
-          let request = requests[i];
-
-          if (i < tuples.length - 1) {
-            request.onsuccess = function(event) {
-              setKeyPath(tuple, event.target.result);
-              observer.onNext(tuple);
-            };
-          } else {
-            request.onsuccess = function(event) {
+        if (wantGenerated) {
+          if (i === tuples.length - 1) {
+            request.onsuccess = (event) => {
               setKeyPath(tuple, event.target.result);
               observer.next(tuple);
-              observer.complete();
+              observer.complete(tuple);
+            };
+          } else {
+            request.onsuccess = (event) => {
+              setKeyPath(tuple, event.target.result);
+              observer.next(tuple);
             };
           }
-
-          request.onerror = function(event) {
-            observer.error(event.target.error);
-          };
-        });
-      });
-    } else {
-      // In this path, only need to watch for the last onsuccess callback being called.
-      return Observable.create(observer => {
-        for (let i = 0; i < requests.length; ++i) {
-          let request = requests[i];
-          request.onerror = function(event) {
-            observer.error(event.target.error);
-          };
+        }
+        request.onerror = (event) => {
+          observer.error(event.target.error);
         };
+      }
 
-        requests[requests.length - 1].onsuccess = function(event) {
+      if (!wantGenerated) {
+        request.onsuccess = (event) => {
           for (let i = 0; i < tuples.length; ++i) {
             let tuple = tuples[i];
             observer.next(tuple);
           }
           observer.complete();
         };
-      });
-    }
+      }
+    });
   }
 
   delete(context, tuples) {
+    if (tuples.length === 0)
+      return Observable.from([]);
+
     let store = context.transaction.idbTransaction.objectStore(this.name);
     let getKeyPath = keyPathGetter(store);
 
-    let requests = [];
-    for (let i = 0; i < tuples.length; ++i) {
-      let key = getKeyPath(tuples[i]);
-      let request = store.delete(key);
-
-      // This error handler will be replaced when something subscribes to the observable.
-      request.onerror = function(event) {
-        throw event.target.error;
-      }
-      
-      requests.push(request);
-    };
-
-    if (requests.length === 0)
-      return Observable.from([]);
-
-    // In this path, the onsuccess callback provides the value of the auto-generated key.
     return Observable.create(observer => {
-      requests.forEach(request => {
+      let request;
+      for (let i = 0; i < tuples.length; ++i) {
+        let key = getKeyPath(tuples[i]);
+        request = store.delete(key);
         request.onerror = function(event) {
           observer.error(event.target.error);
         };
-      });
-
-      requests[requests.length - 1].onsuccess = function(event) {
+      };
+      request.onsuccess = function(event) {
         for (let i = 0; i < tuples.length; ++i) {
           observer.next(tuples[i]);
           observer.complete();

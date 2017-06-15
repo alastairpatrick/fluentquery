@@ -90,7 +90,7 @@ class JSONObjectStore extends ObjectStore {
     });
   }
 
-  put(context, tuples, overwrite) {
+  put(context, tuples, overwrite, wantGenerated) {
     let view = getJSONView(context.transaction, this.tuples);
 
     if (!overwrite) {

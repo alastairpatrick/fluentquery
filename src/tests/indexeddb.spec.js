@@ -269,12 +269,13 @@ describe("IndexedDB integration", function() {
     it("inserts new row with autoincrementing key", function() {
       let observable = store.put(context, [
         {city: "Boston"}
-      ], false);
+      ], false, true);
 
       return resultArray(observable).then(results => {
         expect(results).to.deep.equal([
           {[PrimaryKey]: 4, city: "Boston"},
         ]);
+        expect(results[0][PrimaryKey]).to.equal(4);
 
         let observable = store.execute(context);
         return resultArray(observable).then(results => {
