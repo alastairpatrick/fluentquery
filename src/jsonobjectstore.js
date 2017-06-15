@@ -93,22 +93,26 @@ class JSONObjectStore extends ObjectStore {
   put(context, tuples, overwrite, wantGenerated) {
     let view = getJSONView(context.transaction, this.tuples);
 
-    if (!overwrite) {
-      for (let i = 0; i < tuples.length; ++i) {
-        let tuple = tuples[i];
-        let k = tuple[PrimaryKey];
-        if (view[k] !== undefined) {
-          return Observable.create(observer =>
-            observer.error(new Error(`Tuple with primary key '${k}' already exists.`)));
-        }
-      }
-    }
-
     for (let i = 0; i < tuples.length; ++i) {
       let tuple = tuples[i];
-      let k = tuple[PrimaryKey];
       let v = Object.assign({}, tuple);
-      delete v[PrimaryKey];
+
+      let k;
+      if (has.call(tuple, PrimaryKey)) {
+        k = tuple[PrimaryKey];
+        delete v[PrimaryKey];
+      } else if (Array.isArray(this.tuples)) {
+        k = view.length++;
+        tuple[PrimaryKey] = k;
+      } else {
+        return Observable.throw(new Error("Tuple has no primary key."));
+      }
+
+      if (!overwrite) {
+        if (view[k] !== undefined)
+          return Observable.throw(new Error(`Tuple with primary key '${k}' already exists.`));
+      }
+
       view[k] = v;
     }
 
